@@ -124,6 +124,16 @@
       <!-- 区切り線 -->
       <div class="nav-divider"></div>
 
+      <!-- 管理メニュー（常時表示・スクロール不要） -->
+      <div class="nav-item" data-cmd="/管理" style="padding:8px 20px;">
+        <span class="icon">⚙️</span> 管理コンソール
+      </div>
+      <div class="nav-item" data-cmd="/最高管理者" style="padding:8px 20px;color:var(--accent-gold);font-weight:600;">
+        <span class="icon">📊</span> 最高管理者コンソール
+      </div>
+
+      <div class="nav-divider"></div>
+
       <!-- ツール（折りたたみ） -->
       <div class="nav-step" data-step="tools">
         <div class="nav-step-header tools-header" onclick="App.toggleStep('tools')">
@@ -170,12 +180,6 @@
           </div>
           <div class="nav-item" data-cmd="/ガイド">
             <span class="icon">📖</span> 総合ガイド
-          </div>
-          <div class="nav-item" data-cmd="/管理">
-            <span class="icon">⚙️</span> 管理コンソール
-          </div>
-          <div class="nav-item" data-cmd="/最高管理者" style="color:var(--accent-gold);font-weight:600;">
-            <span class="icon">📊</span> 最高管理者コンソール
           </div>
         </div>
       </div>
