@@ -6,10 +6,12 @@
 const SuperAdmin = {
   SUPER_EMAIL: 'y.wakata.linkdesign@gmail.com',
 
-  // 最高管理者判定
+  // 最高管理者判定（ログイン不要モード対応）
   isSuperAdmin() {
     const user = ApiClient.getUser();
-    return user && user.email === this.SUPER_EMAIL;
+    // ログイン不要モード（userがnull）の場合は最高管理者として動作
+    if (!user) return true;
+    return user.email === this.SUPER_EMAIL;
   },
 
   /* ================================================================

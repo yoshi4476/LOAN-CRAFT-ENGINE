@@ -85,6 +85,17 @@ const DocLearning = {
           <label style="font-size:12px;font-weight:600;">メモ（任意）</label>
           <textarea id="learnMemo" rows="2" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;resize:vertical;"></textarea>
         </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;">📎 提出資料のアップロード（任意）</label>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">提出した資料をアップロードすると、内容をAI学習に反映します。PDF・テキスト・画像に対応。</div>
+          <div id="learnUploadZone" style="border:2px dashed var(--border-primary);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='var(--bg-active)'" ondragleave="this.style.borderColor='var(--border-primary)';this.style.background='transparent'" ondrop="DocLearning.handleDrop(event)" onclick="document.getElementById('learnFileInput').click()">
+            <div style="font-size:24px;margin-bottom:8px;">📄</div>
+            <div style="font-size:13px;color:var(--text-secondary);">クリックまたはドラッグ＆ドロップ</div>
+            <div style="font-size:11px;color:var(--text-muted);">PDF / TXT / DOC / 画像（JPG, PNG）</div>
+            <input id="learnFileInput" type="file" multiple accept=".pdf,.txt,.doc,.docx,.jpg,.jpeg,.png,.csv" style="display:none;" onchange="DocLearning.handleFiles(this.files)">
+          </div>
+          <div id="learnUploadedFiles" style="margin-top:8px;"></div>
+        </div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" onclick="DocLearning.registerCase()">💾 結果を登録</button>
@@ -127,15 +138,31 @@ const DocLearning = {
     const memo = document.getElementById('learnMemo')?.value;
     const savedDocs = Database.load('lce_saved_documents') || {};
 
-    this.saveCase(result, savedDocs, { bank, amount, failReason, memo });
-    App.addSystemMessage(Utils.createAlert('success', '✅', `${result === 'success' ? '融資成功' : '融資不可'}の結果を学習データに登録しました。`));
+    // アップロードファイルの内容をテキストとして追加
+    const uploadedTexts = this._uploadedFiles
+      .filter(f => f.type === 'text')
+      .map(f => f.content)
+      .join('\n---\n');
+
+    const docContents = {
+      ...savedDocs,
+      uploadedFiles: this._uploadedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })),
+      uploadedTexts: uploadedTexts || null
+    };
+
+    this.saveCase(result, docContents, { bank, amount, failReason, memo });
+    this._uploadedFiles = []; // リセット
+    App.addSystemMessage(Utils.createAlert('success', '✅',
+      `${result === 'success' ? '融資成功' : '融資不可'}の結果を学習データに登録しました。` +
+      (docContents.uploadedFiles.length > 0 ? `（添付資料 ${docContents.uploadedFiles.length}件を含む）` : '')
+    ));
   },
 
   // 学習分析レポート（サーバーデータ優先）
   async showAnalysis() {
     let cases;
     // サーバーからデータ取得を試行
-    if (typeof ApiClient !== 'undefined' && ApiClient.getToken()) {
+    if (typeof ApiClient !== 'undefined') {
       try {
         cases = await ApiClient.getLearningCases();
       } catch(e) { console.warn('サーバーから学習データ取得失敗:', e); }
@@ -162,15 +189,16 @@ const DocLearning = {
       html += `<div class="report-subtitle" style="color:var(--accent-red);">⚠️ 失敗要因の分析</div>`;
       failCases.forEach((c, i) => {
         html += `<div style="padding:10px;margin:6px 0;background:rgba(239,68,68,0.08);border-radius:8px;border-left:3px solid var(--accent-red);">
-          <div style="font-size:12px;font-weight:600;">#${i+1} ${c.tags?.bank || '—'} | ${c.tags?.amount ? c.tags.amount.toLocaleString() + '万円' : '—'}</div>
-          <div style="font-size:12px;margin-top:4px;"><strong>推察要因：</strong>${c.failReason || '未記入'}</div>
+          <div style="font-size:12px;font-weight:600;">#${i+1} ${c.tags?.bank || c.bank || '—'} | ${(c.tags?.amount || c.amount) ? (c.tags?.amount || c.amount).toLocaleString() + '万円' : '—'}</div>
+          <div style="font-size:12px;margin-top:4px;"><strong>推察要因：</strong>${c.failReason || c.fail_reason || '未記入'}</div>
+          ${c.uploadedFiles && c.uploadedFiles.length > 0 ? `<div style="font-size:11px;margin-top:4px;color:var(--text-muted);">📎 添付資料: ${c.uploadedFiles.length}件</div>` : ''}
         </div>`;
       });
 
       // AI改善提案
       html += `<div class="report-subtitle" style="margin-top:16px;">💡 次回への改善提案</div>
         <div style="padding:12px;background:var(--bg-tertiary);border-radius:8px;">`;
-      const reasons = failCases.map(c => c.failReason || '').join(' ');
+      const reasons = failCases.map(c => c.failReason || c.fail_reason || '').join(' ');
       const suggestions = [];
       if (reasons.includes('債務超過') || reasons.includes('自己資本')) suggestions.push('役員借入金の資本性劣後ローン認定で実態自己資本比率を改善');
       if (reasons.includes('計画') || reasons.includes('根拠')) suggestions.push('売上計画を積み上げ方式で再構築、各数字に根拠を付記');
@@ -192,5 +220,85 @@ const DocLearning = {
     }
     html += `</div>`;
     App.addSystemMessage(html);
+  },
+
+  /* ================================================================
+   * ファイルアップロード機能
+   * ================================================================ */
+  _uploadedFiles: [],
+
+  // ドラッグ＆ドロップ処理
+  handleDrop(e) {
+    e.preventDefault();
+    const zone = document.getElementById('learnUploadZone');
+    if (zone) { zone.style.borderColor = 'var(--border-primary)'; zone.style.background = 'transparent'; }
+    this.handleFiles(e.dataTransfer.files);
+  },
+
+  // ファイル読み込み
+  handleFiles(files) {
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      const maxSize = 5 * 1024 * 1024; // 5MB制限
+
+      if (file.size > maxSize) {
+        App.addSystemMessage(Utils.createAlert('warning', '⚠️', `${file.name} はサイズが大きすぎます（5MB以下）`));
+        return;
+      }
+
+      // テキスト系ファイル
+      if (file.type.startsWith('text/') || file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+        reader.onload = (e) => {
+          this._uploadedFiles.push({ name: file.name, type: 'text', content: e.target.result, size: file.size });
+          this._renderUploadedFiles();
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+      // PDF
+      else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        reader.onload = (e) => {
+          this._uploadedFiles.push({ name: file.name, type: 'pdf', content: `[PDF: ${file.name} (${(file.size / 1024).toFixed(1)}KB)]`, size: file.size });
+          this._renderUploadedFiles();
+        };
+        reader.readAsArrayBuffer(file);
+      }
+      // 画像
+      else if (file.type.startsWith('image/')) {
+        reader.onload = (e) => {
+          this._uploadedFiles.push({ name: file.name, type: 'image', content: e.target.result, size: file.size });
+          this._renderUploadedFiles();
+        };
+        reader.readAsDataURL(file);
+      }
+      // その他
+      else {
+        this._uploadedFiles.push({ name: file.name, type: 'other', content: `[ファイル: ${file.name}]`, size: file.size });
+        this._renderUploadedFiles();
+      }
+    });
+  },
+
+  // アップロード済みファイルの表示
+  _renderUploadedFiles() {
+    const container = document.getElementById('learnUploadedFiles');
+    if (!container) return;
+    let html = '';
+    this._uploadedFiles.forEach((f, i) => {
+      const icon = f.type === 'pdf' ? '📄' : f.type === 'image' ? '🖼️' : f.type === 'text' ? '📝' : '📎';
+      const size = f.size < 1024 ? f.size + 'B' : (f.size / 1024).toFixed(1) + 'KB';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin:4px 0;background:var(--bg-tertiary);border-radius:6px;">
+        <span>${icon}</span>
+        <span style="flex:1;font-size:12px;font-weight:500;">${f.name}</span>
+        <span style="font-size:11px;color:var(--text-muted);">${size}</span>
+        <button style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:14px;" onclick="DocLearning.removeFile(${i})">✕</button>
+      </div>`;
+    });
+    container.innerHTML = html;
+  },
+
+  // ファイル削除
+  removeFile(index) {
+    this._uploadedFiles.splice(index, 1);
+    this._renderUploadedFiles();
   }
 };
