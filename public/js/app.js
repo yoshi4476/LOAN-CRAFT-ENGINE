@@ -229,20 +229,18 @@ const App = {
     }
   },
 
-  // メッセージ追加
+  // メッセージ表示（画面を置換して表示 - 積み重ねなし）
   addSystemMessage(html) {
     const container = document.getElementById('chatMessages');
-    const msg = document.createElement('div');
-    msg.className = 'message system fade-in';
-    msg.innerHTML = `<div class="message-content">
+    container.innerHTML = `<div class="message system fade-in"><div class="message-content">
       <div class="message-header">
         <div class="avatar system-avatar">🏦</div>
         <span class="name">LOAN CRAFT</span>
         <span class="time">${Utils.now()}</span>
       </div>
       ${html}
-    </div>`;
-    container.appendChild(msg);
+    </div></div>`;
+    container.scrollTop = 0;
     Utils.scrollToBottom(container);
   },
 
