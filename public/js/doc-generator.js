@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - 統合資料生成エンジン
  * DNA＋案件データ → AIが銀行提出レベルの書類を自動生成
  * テンプレ版とAI版を統合、10種類の資料＋整合チェック
@@ -65,13 +65,10 @@ const DocGenerator = {
       </div>`;
     }
 
-    // 生成方法の選択
+    // 生成方法の選択（APIはバックグラウンドで自動判定）
     html += `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-      <button class="btn ${apiKey ? 'btn-primary' : 'btn-secondary'}" onclick="DocGenerator.showDocGrid('ai')" id="docModeAI">
-        🤖 AI生成 ${apiKey ? '(APIキー設定済)' : '(未設定)'}
-      </button>
-      <button class="btn btn-secondary" onclick="DocGenerator.showDocGrid('template')" id="docModeTemplate">
-        📋 テンプレート生成
+      <button class="btn btn-primary" onclick="DocGenerator.showDocGrid(${apiKey ? ''ai'' : ''template''})">
+        📄 資料を生成
       </button>
       <button class="btn btn-secondary" onclick="DocGenerator.showCaseForm()" style="background:linear-gradient(135deg,var(--accent-gold),var(--accent-orange));color:white;border:none;">
         📂 案件自動作成
