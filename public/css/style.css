@@ -183,8 +183,24 @@ body::before {
 
 .sidebar-nav {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding: 8px;
+  min-height: 0;
+}
+
+/* サイドバーのスクロールバーを常に表示 */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 3px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 /* --- ステップベース・サイドバー --- */
