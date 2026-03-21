@@ -1,4 +1,4 @@
-/* 最高管理者API（sql.js対応） */
+﻿/* 最高管理者API（sql.js対応） */
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -8,19 +8,19 @@ const { authenticate, requireSuperAdmin } = require('../middleware/auth');
 router.use(authenticate, requireSuperAdmin);
 
 // ダッシュボード
-router.get('/dashboard', (req, res) => {
-  const totalUsers = (dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL", []) || {}).count || 0;
-  const activeUsers = (dbGet("SELECT COUNT(*) as count FROM users WHERE status = 'Active' AND deleted_at IS NULL", []) || {}).count || 0;
-  const planDist = dbAll("SELECT plan, COUNT(*) as count FROM users WHERE deleted_at IS NULL GROUP BY plan", []);
-  const apiStats = dbGet("SELECT COUNT(*) as calls, COALESCE(SUM(cost), 0) as totalCost, COALESCE(SUM(input_tokens + output_tokens), 0) as totalTokens FROM api_usage", []) || {};
-  const expiringSoon = (dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL AND renewal_date < datetime('now', '+30 days')", []) || {}).count || 0;
-  const recentLogs = dbAll("SELECT al.*, u.name as user_name FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 20", []);
+router.get('/dashboard', async (req, res) => {
+  const totalUsers = (await dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL", []) || {}).count || 0;
+  const activeUsers = (await dbGet("SELECT COUNT(*) as count FROM users WHERE status = 'Active' AND deleted_at IS NULL", []) || {}).count || 0;
+  const planDist = await dbAll("SELECT plan, COUNT(*) as count FROM users WHERE deleted_at IS NULL GROUP BY plan", []);
+  const apiStats = await dbGet("SELECT COUNT(*) as calls, COALESCE(SUM(cost), 0) as totalCost, COALESCE(SUM(input_tokens + output_tokens), 0) as totalTokens FROM api_usage", []) || {};
+  const expiringSoon = (await dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL AND renewal_date < datetime('now', '+30 days')", []) || {}).count || 0;
+  const recentLogs = await dbAll("SELECT al.*, u.name as user_name FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 20", []);
 
   res.json({ totalUsers, activeUsers, planDist, apiStats, expiringSoon, recentLogs });
 });
 
 // ユーザー一覧
-router.get('/users', (req, res) => {
+router.get('/users', async (req, res) => {
   const { search, plan, status, page = 1, limit = 20 } = req.query;
   let sql = 'SELECT id, name, email, plan, status, role, joined_at, renewal_date, last_login, deleted_at FROM users WHERE 1=1';
   const params = [];
@@ -32,12 +32,12 @@ router.get('/users', (req, res) => {
   else { sql += ' AND deleted_at IS NULL'; }
 
   const countSql = sql.replace(/SELECT .+ FROM/, 'SELECT COUNT(*) as count FROM');
-  const total = (dbGet(countSql, params) || {}).count || 0;
+  const total = (await dbGet(countSql, params) || {}).count || 0;
 
   sql += ' ORDER BY joined_at DESC LIMIT ? OFFSET ?';
   params.push(Number(limit), (Number(page) - 1) * Number(limit));
 
-  const users = dbAll(sql, params);
+  const users = await dbAll(sql, params);
   users.forEach(u => {
     if (u.renewal_date) u.remaining_days = Math.ceil((new Date(u.renewal_date) - new Date()) / (1000 * 60 * 60 * 24));
   });
@@ -46,18 +46,18 @@ router.get('/users', (req, res) => {
 });
 
 // ユーザー追加
-router.post('/users', (req, res) => {
+router.post('/users', async (req, res) => {
   const { name, email, plan, contractMonths, memo } = req.body;
   if (!name || !email) return res.status(400).json({ error: '氏名とメールアドレスは必須です' });
 
-  const exists = dbGet('SELECT id FROM users WHERE email = ?', [email]);
+  const exists = await dbGet('SELECT id FROM users WHERE email = ?', [email]);
   if (exists) return res.status(409).json({ error: 'このメールアドレスは既に使用されています' });
 
   const hash = bcrypt.hashSync('temppassword123', 10);
   const months = Number(contractMonths) || 12;
   const renewal = new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const r = dbRun('INSERT INTO users (name, email, password_hash, plan, renewal_date, memo) VALUES (?, ?, ?, ?, ?, ?)', [name, email, hash, plan || 'Free', renewal, memo || '']);
+  const r = await dbRun('INSERT INTO users (name, email, password_hash, plan, renewal_date, memo) VALUES (?, ?, ?, ?, ?, ?)', [name, email, hash, plan || 'Free', renewal, memo || '']);
 
   // ライセンスキー自動生成（UUID v4形式）
   const licenseKey = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -66,43 +66,43 @@ router.post('/users', (req, res) => {
   });
 
   try {
-    dbRun('INSERT INTO license_keys (user_id, license_key, plan, expires_at) VALUES (?, ?, ?, ?)',
+    await dbRun('INSERT INTO license_keys (user_id, license_key, plan, expires_at) VALUES (?, ?, ?, ?)',
       [r.lastInsertRowid, licenseKey, plan || 'Free', renewal]);
   } catch(e) { /* ライセンステーブルが未作成の場合は無視 */ }
 
-  dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_ADD_USER', `ユーザー追加: ${email} / ライセンス: ${licenseKey}`]);
+  await dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_ADD_USER', `ユーザー追加: ${email} / ライセンス: ${licenseKey}`]);
   res.json({ id: r.lastInsertRowid, licenseKey });
 });
 
 // ユーザー更新
-router.put('/users/:id', (req, res) => {
+router.put('/users/:id', async (req, res) => {
   const { name, plan, status, renewal_date, memo } = req.body;
-  const user = dbGet('SELECT * FROM users WHERE id = ?', [parseInt(req.params.id)]);
+  const user = await dbGet('SELECT * FROM users WHERE id = ?', [parseInt(req.params.id)]);
   if (!user) return res.status(404).json({ error: 'ユーザーが見つかりません' });
 
-  dbRun('UPDATE users SET name=?, plan=?, status=?, renewal_date=?, memo=?, updated_at=datetime("now") WHERE id=?', [name || user.name, plan || user.plan, status || user.status, renewal_date || user.renewal_date, memo ?? user.memo, parseInt(req.params.id)]);
+  await dbRun('UPDATE users SET name=?, plan=?, status=?, renewal_date=?, memo=?, updated_at=datetime("now") WHERE id=?', [name || user.name, plan || user.plan, status || user.status, renewal_date || user.renewal_date, memo ?? user.memo, parseInt(req.params.id)]);
 
-  dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_UPDATE_USER', `ユーザー更新: id=${req.params.id}`]);
+  await dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_UPDATE_USER', `ユーザー更新: id=${req.params.id}`]);
   res.json({ success: true });
 });
 
 // ユーザー論理削除
-router.delete('/users/:id', (req, res) => {
-  dbRun('UPDATE users SET status = "Deleted", deleted_at = datetime("now"), deleted_by = ?, updated_at = datetime("now") WHERE id = ?', [req.user.id, parseInt(req.params.id)]);
-  dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_DELETE_USER', `ユーザー論理削除: id=${req.params.id}`]);
+router.delete('/users/:id', async (req, res) => {
+  await dbRun('UPDATE users SET status = "Deleted", deleted_at = datetime("now"), deleted_by = ?, updated_at = datetime("now") WHERE id = ?', [req.user.id, parseInt(req.params.id)]);
+  await dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_DELETE_USER', `ユーザー論理削除: id=${req.params.id}`]);
   res.json({ success: true });
 });
 
 // ユーザー復元
-router.post('/users/:id/restore', (req, res) => {
-  dbRun('UPDATE users SET status = "Active", deleted_at = NULL, deleted_by = NULL, updated_at = datetime("now") WHERE id = ?', [parseInt(req.params.id)]);
-  dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_RESTORE_USER', `ユーザー復元: id=${req.params.id}`]);
+router.post('/users/:id/restore', async (req, res) => {
+  await dbRun('UPDATE users SET status = "Active", deleted_at = NULL, deleted_by = NULL, updated_at = datetime("now") WHERE id = ?', [parseInt(req.params.id)]);
+  await dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_RESTORE_USER', `ユーザー復元: id=${req.params.id}`]);
   res.json({ success: true });
 });
 
 // 監査ログ
-router.get('/logs', (req, res) => {
-  const logs = dbAll("SELECT al.*, u.name as user_name FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 100", []);
+router.get('/logs', async (req, res) => {
+  const logs = await dbAll("SELECT al.*, u.name as user_name FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 100", []);
   res.json(logs);
 });
 

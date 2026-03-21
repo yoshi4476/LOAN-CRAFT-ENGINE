@@ -1,4 +1,4 @@
-/* OpenAI APIプロキシ（sql.js対応） */
+﻿/* OpenAI APIプロキシ（sql.js対応） */
 const express = require('express');
 const router = express.Router();
 const { dbRun, dbGet } = require('../db');
@@ -8,7 +8,7 @@ router.post('/generate', authenticate, async (req, res) => {
   try {
     let apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      const row = dbGet("SELECT value FROM settings WHERE key = 'openai_api_key'", []);
+      const row = await dbGet("SELECT value FROM settings WHERE key = 'openai_api_key'", []);
       apiKey = row?.value;
     }
     if (!apiKey) return res.status(400).json({ error: 'OpenAI APIキーが未設定です。管理コンソールから設定してください。' });
@@ -31,7 +31,7 @@ router.post('/generate', authenticate, async (req, res) => {
     const rates = costRates[model] || costRates['gpt-4o-mini'];
     const cost = (usage.prompt_tokens || 0) / 1000 * rates.i + (usage.completion_tokens || 0) / 1000 * rates.o;
 
-    dbRun('INSERT INTO api_usage (user_id, model, input_tokens, output_tokens, cost) VALUES (?, ?, ?, ?, ?)', [req.user.id, model, usage.prompt_tokens || 0, usage.completion_tokens || 0, cost]);
+    await dbRun('INSERT INTO api_usage (user_id, model, input_tokens, output_tokens, cost) VALUES (?, ?, ?, ?, ?)', [req.user.id, model, usage.prompt_tokens || 0, usage.completion_tokens || 0, cost]);
 
     res.json(data);
   } catch (e) {
@@ -39,15 +39,15 @@ router.post('/generate', authenticate, async (req, res) => {
   }
 });
 
-router.get('/usage', authenticate, (req, res) => {
-  const stats = dbGet('SELECT COUNT(*) as calls, COALESCE(SUM(input_tokens + output_tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost FROM api_usage WHERE user_id = ?', [req.user.id]);
+router.get('/usage', authenticate, async (req, res) => {
+  const stats = await dbGet('SELECT COUNT(*) as calls, COALESCE(SUM(input_tokens + output_tokens), 0) as tokens, COALESCE(SUM(cost), 0) as cost FROM api_usage WHERE user_id = ?', [req.user.id]);
   res.json(stats || { calls: 0, tokens: 0, cost: 0 });
 });
 
-router.put('/settings', authenticate, (req, res) => {
+router.put('/settings', authenticate, async (req, res) => {
   const { apiKey, model } = req.body;
-  if (apiKey) dbRun("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('openai_api_key', ?, datetime('now'))", [apiKey]);
-  if (model) dbRun("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('openai_model', ?, datetime('now'))", [model]);
+  if (apiKey) await dbRun("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('openai_api_key', ?, datetime('now'))", [apiKey]);
+  if (model) await dbRun("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('openai_model', ?, datetime('now'))", [model]);
   res.json({ success: true });
 });
 

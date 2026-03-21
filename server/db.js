@@ -1,6 +1,6 @@
 /* ============================================================
- * LOAN CRAFT ENGINE v5.0 - DB初期化（PostgreSQL対応）
- * レイウェイのPostgreSQLアドオンに接続
+ * LOAN CRAFT ENGINE v5.0 - DB初期化（PostgreSQL対応・async版）
+ * deasync不要 — 全て async/await で動作
  * ============================================================ */
 const { Pool } = require('pg');
 
@@ -144,90 +144,55 @@ async function getDb() {
 // saveDb は PostgreSQL では不要（自動永続化）
 function saveDb() {}
 
-// ヘルパー: INSERT/UPDATE/DELETE 実行
-function dbRun(sql, params = []) {
-  // SQLiteの ? パラメータを PostgreSQLの $1 $2 に変換
+// SQLite ? → PostgreSQL $1 $2 変換ヘルパー
+function convertSql(sql) {
   let pgSql = sql;
   let idx = 0;
   pgSql = pgSql.replace(/\?/g, () => `$${++idx}`);
-
-  // datetime("now") を NOW() に変換
   pgSql = pgSql.replace(/datetime\(['"]now['"]\)/gi, 'NOW()');
+  pgSql = pgSql.replace(/datetime\(['"]now['"],\s*['"]\+(\d+)\s+days['"]\)/gi, "NOW() + INTERVAL '$1 days'");
+  return pgSql;
+}
 
-  // 同期的に呼ばれるため、内部でPromiseを使いつつ結果を返す
-  // RETURNING id で lastInsertRowid を取得
+// async版: INSERT/UPDATE/DELETE
+async function dbRun(sql, params = []) {
+  let pgSql = convertSql(sql);
   const hasInsert = /^\s*INSERT/i.test(pgSql);
   if (hasInsert && !/RETURNING/i.test(pgSql)) {
     pgSql = pgSql.replace(/\)\s*$/, ') RETURNING id');
-    // VALUES (...) の後に RETURNING id を付ける
-    if (!/RETURNING/i.test(pgSql)) {
-      pgSql += ' RETURNING id';
-    }
+    if (!/RETURNING/i.test(pgSql)) pgSql += ' RETURNING id';
   }
-
-  // 同期互換ラッパー（deasync）
-  let result = { lastInsertRowid: 0 };
-  const deasync = require('deasync');
-  let done = false;
-
-  pool.query(pgSql, params).then(res => {
-    if (res.rows && res.rows.length > 0 && res.rows[0].id !== undefined) {
-      result.lastInsertRowid = res.rows[0].id;
-    }
-    done = true;
-  }).catch(err => {
+  try {
+    const res = await pool.query(pgSql, params);
+    return { lastInsertRowid: (res.rows && res.rows.length > 0 && res.rows[0].id !== undefined) ? res.rows[0].id : 0 };
+  } catch(err) {
     console.error('[DB ERROR] dbRun:', err.message, '\nSQL:', pgSql);
-    done = true;
-  });
-
-  deasync.loopWhile(() => !done);
-  return result;
+    return { lastInsertRowid: 0 };
+  }
 }
 
-// ヘルパー: SELECT 1行取得
-function dbGet(sql, params = []) {
-  let pgSql = sql;
-  let idx = 0;
-  pgSql = pgSql.replace(/\?/g, () => `$${++idx}`);
-  pgSql = pgSql.replace(/datetime\(['"]now['"]\)/gi, 'NOW()');
-
-  let result = null;
-  const deasync = require('deasync');
-  let done = false;
-
-  pool.query(pgSql, params).then(res => {
-    result = res.rows.length > 0 ? res.rows[0] : null;
-    done = true;
-  }).catch(err => {
+// async版: SELECT 1行
+async function dbGet(sql, params = []) {
+  const pgSql = convertSql(sql);
+  try {
+    const res = await pool.query(pgSql, params);
+    return res.rows.length > 0 ? res.rows[0] : null;
+  } catch(err) {
     console.error('[DB ERROR] dbGet:', err.message, '\nSQL:', pgSql);
-    done = true;
-  });
-
-  deasync.loopWhile(() => !done);
-  return result;
+    return null;
+  }
 }
 
-// ヘルパー: SELECT 全行取得
-function dbAll(sql, params = []) {
-  let pgSql = sql;
-  let idx = 0;
-  pgSql = pgSql.replace(/\?/g, () => `$${++idx}`);
-  pgSql = pgSql.replace(/datetime\(['"]now['"]\)/gi, 'NOW()');
-
-  let result = [];
-  const deasync = require('deasync');
-  let done = false;
-
-  pool.query(pgSql, params).then(res => {
-    result = res.rows;
-    done = true;
-  }).catch(err => {
+// async版: SELECT 全行
+async function dbAll(sql, params = []) {
+  const pgSql = convertSql(sql);
+  try {
+    const res = await pool.query(pgSql, params);
+    return res.rows;
+  } catch(err) {
     console.error('[DB ERROR] dbAll:', err.message, '\nSQL:', pgSql);
-    done = true;
-  });
-
-  deasync.loopWhile(() => !done);
-  return result;
+    return [];
+  }
 }
 
 module.exports = { getDb, saveDb, dbRun, dbGet, dbAll, pool };
