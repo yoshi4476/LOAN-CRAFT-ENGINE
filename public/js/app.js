@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - メインアプリケーション
  * 初期化・コマンドシステム・チャットUI管理
  * ============================================================ */
@@ -34,7 +34,7 @@ const App = {
     { cmd: '/類似', label: '/類似', desc: '類似過去案件の検索', fn: () => Database.showSimilarCases() },
     { cmd: '/チェック', label: '/チェック', desc: '提出前の最終チェックリスト', fn: () => Extra.showPreSubmitChecklist() },
     { cmd: '/スケジュール', label: '/スケジュール', desc: '📅 面談スケジュール管理', fn: () => Schedule.show() },
-    { cmd: '/案件', label: '/案件', desc: '📂 複数案件管理（切替・作成・削除）', fn: () => Database.showProjectSelector() },
+    { cmd: '/案件', label: '/案件', desc: '📂 複数案件管理（切替・作成・削除）', 
     { cmd: '/保存資料', label: '/保存資料', desc: '💾 保存済み資料一覧', fn: () => DocGenerator.showSavedDocuments() },
     { cmd: '/ダッシュボード', label: '/ダッシュボード', desc: '📊 ダッシュボード表示', fn: () => App.showDashboard() },
     { cmd: '/用語', label: '/用語', desc: '融資用語辞典', fn: () => App.addSystemMessage(Glossary.showAll()) },
