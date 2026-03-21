@@ -1848,51 +1848,109 @@ ${bankProfiles[target] || bankProfiles.general}
       App.addSystemMessage(Utils.createAlert('error', '🔑', 'APIキーが未設定です。最高管理者コンソール → 設定タブから設定してください。'));
       return;
     }
-    const chatMessages = document.getElementById('chatMessages');
-    if (chatMessages) chatMessages.innerHTML = '';
-    App.addSystemMessage(`<div class="glass-card" style="text-align:center;padding:32px;">
-      <div class="loading-spinner"></div>
-      <div style="margin-top:12px;font-size:14px;font-weight:600;">🚀 全資料を一括生成中...</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">案件概要書を生成しています。完了まで1〜2分お待ちください。</div>
-    </div>`);
-    // 案件概要書をAIで生成
-    try {
-      const dna = Database.loadCompanyData() || {};
-      const systemPrompt = AIEngine.buildSystemPrompt();
-      const userPrompt = AIEngine.buildUserPrompt('autoCase', dna, '');
-      const model = this.getModel();
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
-      });
-      const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
-      if (data.usage) Admin.trackApiUsage(data.usage.prompt_tokens||0, data.usage.completion_tokens||0, model);
-      const content = data.choices[0].message.content;
-      if (chatMessages) chatMessages.innerHTML = '';
-      App.addSystemMessage(`<div class="glass-card highlight">
-        <div class="report-title">📂 案件概要書（AI自動生成）</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">トークン: ${(data.usage?.total_tokens||0).toLocaleString()}</div>
-        <div style="font-size:13px;line-height:1.8;white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText(document.querySelector('.glass-card.highlight div[style*=pre-wrap]')?.textContent||'')">📋 コピー</button>
-          <button class="btn btn-secondary btn-sm" onclick="DocGenerator.showMenu()">📄 個別資料を生成</button>
-          <button class="btn btn-secondary btn-sm" onclick="DocGenerator.showCaseForm()">✏️ 要項を修正</button>
-        </div>
-      </div>`);
-    } catch(err) {
-      App.addSystemMessage(Utils.createAlert('error', '❌', `生成エラー: ${err.message}`));
-    }
-  },
-};
 
-// 後方互換エイリアス
-const Documents = {
-  generateAll: () => DocGenerator.showMenu(),
-  generate: (id) => DocGenerator.generateTemplate(id, Database.loadCompanyData(), Database.loadRatingResult()),
-  runConsistencyCheck: () => DocGenerator.runConsistencyCheck(),
-};
-const AIEngine = {
-  showGenerateUI: () => DocGenerator.showMenu(),
+    // 融資申請に必要な主要7資料セット
+    const caseDocSet = [
+      { id: 'executive', icon: '📋', name: 'エグゼクティブサマリー' },
+      { id: 'funduse',   icon: '💹', name: '資金使途明細書' },
+      { id: 'bizplan',   icon: '📊', name: '事業計画書' },
+      { id: 'cashflow',  icon: '💰', name: '資金繰り表' },
+      { id: 'repayplan', icon: '📈', name: '返済計画書' },
+      { id: 'debtlist',  icon: '📝', name: '借入金一覧表' },
+      { id: 'ringi',     icon: '🏦', name: '稟議サポート資料' },
+    ];
+
+    const chatMessages = document.getElementById('chatMessages');
+    const total = caseDocSet.length;
+    const results = [];
+    const dna = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+    const model = this.getModel();
+    const systemPrompt = AIEngine.buildSystemPrompt();
+
+    // 順番に生成（進捗バー表示）
+    for (let i = 0; i < total; i++) {
+      const doc = caseDocSet[i];
+      // 進捗表示
+      if (chatMessages) chatMessages.innerHTML = '<div class="glass-card" style="text-align:center;padding:48px;max-width:600px;margin:0 auto;">' +
+        '<div class="loading-spinner"></div>' +
+        '<div style="margin-top:16px;font-size:16px;font-weight:700;">🚀 融資資料一括生成中...</div>' +
+        '<div style="margin-top:12px;font-size:13px;color:var(--text-secondary);">' + doc.icon + ' ' + doc.name + ' を生成中 (' + (i+1) + '/' + total + ')</div>' +
+        '<div style="margin-top:16px;background:var(--bg-input);border-radius:8px;height:8px;overflow:hidden;">' +
+        '<div style="height:100%;background:linear-gradient(90deg,var(--primary),var(--accent-cyan));width:' + ((i+1)/total*100).toFixed(0) + '%;transition:width 0.3s;border-radius:8px;"></div></div>' +
+        '<div style="margin-top:12px;font-size:11px;color:var(--text-muted);">完了まで数分お待ちください</div></div>';
+
+      try {
+        const userPrompt = AIEngine.buildUserPrompt(doc.id, dna, rr, 'general', '');
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error.message);
+        if (data.usage) Admin.trackApiUsage(data.usage.prompt_tokens||0, data.usage.completion_tokens||0, model);
+        results.push({ ...doc, content: data.choices[0].message.content, tokens: data.usage?.total_tokens || 0 });
+      } catch(err) {
+        results.push({ ...doc, content: '生成エラー: ' + err.message, tokens: 0, error: true });
+      }
+    }
+
+    // 全資料をまとめて表示
+    const totalTokens = results.reduce((sum, r) => sum + r.tokens, 0);
+    let html = '<div style="max-width:900px;margin:0 auto;">';
+
+    // ヘッダー
+    html += '<div class="glass-card highlight" style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+      '<div class="report-title" style="margin:0;">🚀 融資申請資料パッケージ</div>' +
+      '<div style="display:flex;gap:6px;">' +
+      '<button class="btn btn-primary btn-sm" onclick="DocGenerator.copyAllCase()">📋 全コピー</button>' +
+      '<button class="btn btn-secondary btn-sm" onclick="DocGenerator.showCaseForm()">✏️ 要項修正</button>' +
+      '<button class="btn btn-secondary btn-sm" onclick="DocGenerator.showMenu()">📄 個別資料</button>' +
+      '</div></div>' +
+      '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">' +
+      results.length + '資料生成完了 ・ 合計トークン: ' + totalTokens.toLocaleString() + ' ・ ' + new Date().toLocaleString('ja-JP') +
+      '</div></div>';
+
+    // 目次
+    html += '<div class="glass-card" style="margin-bottom:16px;padding:16px;">' +
+      '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">📑 目次</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;">';
+    results.forEach((r, i) => {
+      html += '<a href="#caseDoc' + i + '" style="color:var(--primary-light);text-decoration:none;padding:4px;">' + r.icon + ' ' + r.name + (r.error ? ' ⚠️' : '') + '</a>';
+    });
+    html += '</div></div>';
+
+    // 各資料
+    results.forEach((r, i) => {
+      const rendered = r.error ? '<div style="color:var(--accent-red);">' + r.content + '</div>' : this.renderMarkdown(r.content);
+      html += '<div class="glass-card" style="margin-bottom:16px;" id="caseDoc' + i + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-secondary);">' +
+        '<div style="font-size:15px;font-weight:700;">' + r.icon + ' ' + r.name + '</div>' +
+        '<div style="font-size:10px;color:var(--text-muted);">' + r.tokens.toLocaleString() + ' tokens</div>' +
+        '</div>' +
+        '<div class="doc-viewer" style="font-size:13px;line-height:2.0;">' + rendered + '</div>' +
+        '</div>';
+    });
+
+    html += '</div>';
+    if (chatMessages) chatMessages.innerHTML = html;
+    if (chatMessages) chatMessages.scrollTop = 0;
+  },
+
+  // 全資料テキストコピー
+  copyAllCase() {
+    const els = document.querySelectorAll('.doc-viewer');
+    let text = '';
+    els.forEach(el => { text += el.textContent + '\n\n========================================\n\n'; });
+    navigator.clipboard.writeText(text).then(() => {
+      // コピー成功の通知（画面は切り替えない）
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = '✅ コピー完了';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+  },
+
 };
