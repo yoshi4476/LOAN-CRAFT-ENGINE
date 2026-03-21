@@ -23,6 +23,10 @@ const SuperAdmin = {
       return;
     }
 
+    // チャットエリアをクリア（タブ切替時の連なり防止）
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) chatMessages.innerHTML = '';
+
     let html = `<div class="glass-card highlight">
       <div class="report-title">📊 最高管理者コンソール</div>
       <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;" id="superAdminTabs">
