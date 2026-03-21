@@ -230,4 +230,4 @@ function dbAll(sql, params = []) {
   return result;
 }
 
-module.exports = { getDb, saveDb, dbRun, dbGet, dbAll };
+module.exports = { getDb, saveDb, dbRun, dbGet, dbAll, pool };

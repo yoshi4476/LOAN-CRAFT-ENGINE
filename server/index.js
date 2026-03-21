@@ -27,16 +27,22 @@ app.get('/api/health', (req, res) => {
 // 非同期起動（sql.jsのDB初期化後にルートを登録）
 async function startServer() {
   // DB初期化
-  const { getDb, dbGet, dbRun } = require('./db');
+  const { getDb, dbGet, dbRun, pool } = require('./db');
   await getDb();
 
   // デフォルトユーザー自動作成（ログイン不要モード用）
-  const defaultUser = dbGet('SELECT id FROM users WHERE id = 1', []);
-  if (!defaultUser) {
-    const bcrypt = require('bcryptjs');
-    dbRun('INSERT INTO users (name, email, password_hash, role, plan) VALUES (?, ?, ?, ?, ?)',
-      ['管理者', process.env.SUPER_ADMIN_EMAIL || 'y.wakata.linkdesign@gmail.com', bcrypt.hashSync('default', 10), 'super_admin', 'Free']);
-    console.log('  ✅ デフォルトユーザーを作成しました');
+  try {
+    const res = await pool.query('SELECT id FROM users WHERE id = 1');
+    if (res.rows.length === 0) {
+      const bcrypt = require('bcryptjs');
+      await pool.query(
+        'INSERT INTO users (name, email, password_hash, role, plan) VALUES ($1, $2, $3, $4, $5)',
+        ['管理者', process.env.SUPER_ADMIN_EMAIL || 'y.wakata.linkdesign@gmail.com', bcrypt.hashSync('default', 10), 'super_admin', 'Free']
+      );
+      console.log('  ✅ デフォルトユーザーを作成しました');
+    }
+  } catch(e) {
+    console.warn('  ⚠️ デフォルトユーザー確認スキップ:', e.message);
   }
 
   // APIルート
