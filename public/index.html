@@ -290,11 +290,11 @@
 <script src="js/app.js"></script>
 <script>
   // サーバー接続時はデータ同期
-  if (typeof ApiClient !== 'undefined') {
-    Database.syncFromServer();
-  }
-  // 最高管理者サイドバー初期化（即時実行）
-  if (typeof SuperAdmin !== 'undefined') SuperAdmin.initSidebar();
+  try {
+    if (typeof ApiClient !== 'undefined' && typeof Database !== 'undefined') {
+      Database.syncFromServer();
+    }
+  } catch(e) { console.warn('データ同期スキップ:', e.message); }
 </script>
 
 </body>
