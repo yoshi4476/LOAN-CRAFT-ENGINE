@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOAN CRAFT ENGINE v5.0 — ログイン</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      background: linear-gradient(135deg, #0a0e1a 0%, #121832 40%, #0d1117 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e4e6f0;
+      overflow: hidden;
+    }
+    /* 背景パーティクル */
+    .bg-particles {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(108,99,255,0.3), transparent);
+      animation: float 15s ease-in-out infinite;
+    }
+    .particle:nth-child(1) { width: 300px; height: 300px; top: 10%; left: -5%; animation-delay: 0s; }
+    .particle:nth-child(2) { width: 200px; height: 200px; top: 60%; right: -5%; animation-delay: 3s; }
+    .particle:nth-child(3) { width: 250px; height: 250px; bottom: -10%; left: 40%; animation-delay: 6s; }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+      50% { transform: translate(30px, -30px) scale(1.1); opacity: 0.5; }
+    }
+
+    .login-container {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 440px; padding: 20px;
+    }
+    .login-card {
+      background: rgba(20, 25, 45, 0.85);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      border-radius: 20px;
+      padding: 48px 40px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 60px rgba(108,99,255,0.08);
+    }
+    .logo {
+      text-align: center; margin-bottom: 32px;
+    }
+    .logo-icon {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: linear-gradient(135deg, #6C63FF, #00D2FF);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin: 0 auto 12px;
+      box-shadow: 0 4px 20px rgba(108,99,255,0.3);
+    }
+    .logo h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    .logo p { font-size: 12px; color: rgba(228,230,240,0.5); margin-top: 4px; }
+
+    .tabs {
+      display: flex; gap: 0; margin-bottom: 28px;
+      background: rgba(255,255,255,0.03); border-radius: 10px; padding: 4px;
+    }
+    .tab {
+      flex: 1; text-align: center; padding: 10px; cursor: pointer;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      transition: all 0.25s; color: rgba(228,230,240,0.5);
+    }
+    .tab.active {
+      background: linear-gradient(135deg, #6C63FF, #4A42DB);
+      color: #fff; box-shadow: 0 2px 12px rgba(108,99,255,0.3);
+    }
+
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 500;
+      margin-bottom: 6px; color: rgba(228,230,240,0.7);
+    }
+    input {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid rgba(108,99,255,0.15);
+      background: rgba(255,255,255,0.04);
+      color: #e4e6f0; font-size: 14px; font-family: inherit;
+      transition: border-color 0.25s;
+    }
+    input:focus { outline: none; border-color: #6C63FF; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+    input::placeholder { color: rgba(228,230,240,0.25); }
+
+    .btn-primary {
+      width: 100%; padding: 14px; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, #6C63FF, #4A42DB);
+      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: all 0.25s; margin-top: 8px;
+      box-shadow: 0 4px 16px rgba(108,99,255,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(108,99,255,0.4); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .error-msg {
+      padding: 10px 14px; border-radius: 8px; font-size: 12px;
+      background: rgba(231,76,60,0.12); border: 1px solid rgba(231,76,60,0.3);
+      color: #E74C3C; margin-bottom: 16px; display: none;
+    }
+    .success-msg {
+      padding: 10px 14px; border-radius: 8px; font-size: 12px;
+      background: rgba(39,174,96,0.12); border: 1px solid rgba(39,174,96,0.3);
+      color: #27AE60; margin-bottom: 16px; display: none;
+    }
+    .footer { text-align: center; margin-top: 20px; font-size: 11px; color: rgba(228,230,240,0.25); }
+  </style>
+</head>
+<body>
+  <div class="bg-particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="logo">
+        <div class="logo-icon">🏦</div>
+        <h1>LOAN CRAFT</h1>
+        <p>ENGINE v5.0</p>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('login')">ログイン</div>
+        <div class="tab" onclick="switchTab('register')">新規登録</div>
+      </div>
+
+      <div id="errorMsg" class="error-msg"></div>
+      <div id="successMsg" class="success-msg"></div>
+
+      <!-- ログインフォーム -->
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>メールアドレス</label>
+          <input type="email" id="loginEmail" placeholder="mail@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>パスワード</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-primary" id="loginBtn">ログイン</button>
+      </form>
+
+      <!-- 登録フォーム -->
+      <form id="registerForm" onsubmit="handleRegister(event)" style="display:none;">
+        <div class="form-group">
+          <label>氏名</label>
+          <input type="text" id="regName" placeholder="山田 太郎" required>
+        </div>
+        <div class="form-group">
+          <label>メールアドレス</label>
+          <input type="email" id="regEmail" placeholder="mail@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>パスワード（6文字以上）</label>
+          <input type="password" id="regPassword" placeholder="••••••••" minlength="6" required>
+        </div>
+        <button type="submit" class="btn-primary" id="regBtn">新規登録</button>
+      </form>
+
+      <div class="footer">© 2026 LOAN CRAFT ENGINE — All Rights Reserved</div>
+    </div>
+  </div>
+
+  <script>
+    // 既にログイン済みならリダイレクト
+    if (localStorage.getItem('lce_token')) window.location.href = '/';
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+      });
+      document.getElementById('loginForm').style.display = tab === 'login' ? '' : 'none';
+      document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+      hideMessages();
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg; el.style.display = 'block';
+      document.getElementById('successMsg').style.display = 'none';
+    }
+    function showSuccess(msg) {
+      const el = document.getElementById('successMsg');
+      el.textContent = msg; el.style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+    function hideMessages() {
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'none';
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault(); hideMessages();
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = 'ログイン中...';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('loginEmail').value.trim(),
+            password: document.getElementById('loginPassword').value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'ログイン失敗');
+        localStorage.setItem('lce_token', data.token);
+        localStorage.setItem('lce_user', JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'ログイン';
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault(); hideMessages();
+      const btn = document.getElementById('regBtn');
+      btn.disabled = true; btn.textContent = '登録中...';
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('regName').value.trim(),
+            email: document.getElementById('regEmail').value.trim(),
+            password: document.getElementById('regPassword').value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '登録失敗');
+        localStorage.setItem('lce_token', data.token);
+        localStorage.setItem('lce_user', JSON.stringify(data.user));
+        window.location.href = '/';
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = '新規登録';
+      }
+    }
+  </script>
+</body>
+</html>

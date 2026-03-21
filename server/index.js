@@ -1,0 +1,71 @@
+/* ============================================================
+ * LOAN CRAFT ENGINE v5.0 - Expressサーバー
+ * ============================================================ */
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// ミドルウェア
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+
+// 静的ファイル
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// ヘルスチェック
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', version: '5.0.0', time: new Date().toISOString() });
+});
+
+// 非同期起動（sql.jsのDB初期化後にルートを登録）
+async function startServer() {
+  // DB初期化
+  const { getDb, dbGet, dbRun } = require('./db');
+  await getDb();
+
+  // デフォルトユーザー自動作成（ログイン不要モード用）
+  const defaultUser = dbGet('SELECT id FROM users WHERE id = 1', []);
+  if (!defaultUser) {
+    const bcrypt = require('bcryptjs');
+    dbRun('INSERT INTO users (name, email, password_hash, role, plan) VALUES (?, ?, ?, ?, ?)',
+      ['ユーザー', 'default@local', bcrypt.hashSync('default', 10), 'user', 'Free']);
+    console.log('  ✅ デフォルトユーザーを作成しました');
+  }
+
+  // APIルート
+  app.use('/api/auth', require('./routes/auth'));
+  app.use('/api/company', require('./routes/company'));
+  app.use('/api/data', require('./routes/data'));
+  app.use('/api/ai', require('./routes/ai'));
+  app.use('/api/admin', require('./routes/admin'));
+  app.use('/api/features', require('./routes/features'));
+
+  // SPAフォールバック
+  app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+  app.get('/login', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'login.html')));
+
+  // エラーハンドリング
+  app.use((err, req, res, next) => {
+    console.error('[ERROR]', err.message);
+    res.status(500).json({ error: 'サーバーエラーが発生しました' });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`\n╔═══════════════════════════════════════════╗`);
+    console.log(`║   LOAN CRAFT ENGINE v5.0 — Server         ║`);
+    console.log(`║   http://localhost:${PORT}                    ║`);
+    console.log(`╚═══════════════════════════════════════════╝\n`);
+  });
+}
+
+startServer().catch(err => {
+  console.error('起動エラー:', err);
+  process.exit(1);
+});
