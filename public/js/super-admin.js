@@ -73,13 +73,23 @@ const SuperAdmin = {
       </select>
       <button class="btn btn-primary btn-sm" onclick="SuperAdmin.searchUsers()">🔍 検索</button>
       <button class="btn btn-secondary btn-sm" onclick="SuperAdmin.showAddUserForm()">➕ 新規追加</button>
+      <button class="btn btn-secondary btn-sm" onclick="SuperAdmin.exportCSV()">📥 CSV出力</button>
+      <button class="btn btn-secondary btn-sm" onclick="SuperAdmin.bulkRenewSelected()">📅 一括延長</button>
     </div>`;
 
     // ユーザーテーブル
     if (users.length > 0) {
       html += `<div style="overflow-x:auto;"><table class="data-table"><thead><tr>
-        <th>ID</th><th>氏名</th><th>メール</th><th>プラン</th><th>ステータス</th>
-        <th>加入日</th><th>更新期限</th><th>残日数</th><th>最終ログイン</th><th>操作</th>
+        <th style="width:30px;"><input type="checkbox" id="saSelectAll" onchange="SuperAdmin.toggleSelectAll(this)" title="全選択"></th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('id')">ID ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('name')">氏名 ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('email')">メール ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('plan')">プラン ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('status')">ステータス ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('joined_at')">加入日 ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('renewal_date')">更新期限 ⇅</th>
+        <th style="cursor:pointer;" onclick="SuperAdmin.sortBy('remaining_days')">残日数 ⇅</th>
+        <th>最終ログイン</th><th>操作</th>
       </tr></thead><tbody>`;
 
       users.forEach(u => {
@@ -92,12 +102,14 @@ const SuperAdmin = {
           Deleted: '<span style="color:var(--text-muted);font-weight:600;">🗑Deleted</span>',
         }[u.status] || u.status;
 
+        const expiredBadge = remaining != null && remaining <= 0 ? '<span style="background:var(--accent-red);color:#fff;padding:1px 6px;border-radius:8px;font-size:10px;margin-left:4px;">期限切れ</span>' : '';
         html += `<tr style="${remaining <= 7 ? 'background:rgba(239,68,68,0.08);' : remaining <= 30 ? 'background:rgba(245,158,14,0.08);' : ''}">
+          <td><input type="checkbox" class="sa-user-check" data-uid="${u.id}" data-uname="${u.name || ''}"></td>
           <td style="font-size:11px;color:var(--text-muted);">${u.id}</td>
           <td style="font-weight:600;">${u.name || '—'}</td>
           <td style="font-size:12px;">${u.email}</td>
           <td><span style="padding:2px 8px;border-radius:12px;font-size:11px;background:var(--bg-tertiary);font-weight:600;">${u.plan || 'Free'}</span></td>
-          <td>${statusBadge}</td>
+          <td>${statusBadge}${expiredBadge}</td>
           <td style="font-size:11px;">${u.joined_at ? new Date(u.joined_at).toLocaleDateString('ja-JP') : '—'}</td>
           <td style="font-size:11px;">${u.renewal_date ? new Date(u.renewal_date).toLocaleDateString('ja-JP') : '—'}</td>
           <td style="font-weight:700;color:${renewalColor};">${remaining != null ? remaining + '日' : '—'}</td>
@@ -239,12 +251,14 @@ const SuperAdmin = {
     let html = `<div class="report-subtitle">🛡️ データ保護状況</div>`;
 
     const checks = [
-      { label: '論理削除の徹底', status: '✅', detail: '全テーブルにdeleted_at/deleted_byカラム実装済み。物理削除禁止。' },
-      { label: 'マイグレーション安全規約', status: '✅', detail: 'DROP TABLE/DROP COLUMN/TRUNCATE禁止。リネーム→90日保持→管理者承認後削除。' },
-      { label: '監査ログ', status: '✅', detail: 'ユーザーの追加・更新・削除・ログインを全て記録。' },
-      { label: 'トランザクション整合性', status: '✅', detail: 'ユーザー追加時にDBレコード＋ライセンスを同一トランザクションで作成。' },
-      { label: '認証・認可チェック', status: '✅', detail: 'JWT認証＋最高管理者権限チェックをミドルウェアで適用。' },
-      { label: 'バックアップ', status: '⚠️', detail: 'sql.jsファイルベース（server/data/lce.db）。定期バックアップはcron等で設定推奨。' },
+      { label: 'ソフトデリート（論理削除）', status: '✅', detail: '全テーブルにdeleted_at/deleted_byカラム実装済み。DELETE文の使用を全面禁止。全クエリにWHERE deleted_at IS NULLを自動付与。' },
+      { label: 'マイグレーション安全規約', status: '✅', detail: 'DROP TABLE/DROP COLUMN/TRUNCATE禁止。カラム名に_deprecated_YYYYMMDDサフィックスでリネーム→90日保持→最高管理者承認後削除。' },
+      { label: '監査ログシステム', status: '✅', detail: 'ユーザーの追加・編集・削除・ログイン・設定変更を全て記録。変更前後の値を保持。' },
+      { label: 'トランザクション整合性', status: '✅', detail: 'ユーザー追加時にDBレコード＋ライセンスを同一トランザクションで作成。障害時は自動ロールバック。' },
+      { label: '認証・認可チェック', status: '✅', detail: 'JWT認証＋最高管理者権限チェックをミドルウェアで適用。全APIエンドポイントに同一権限チェック。' },
+      { label: 'データベースバックアップ', status: '✅', detail: 'PostgreSQL（Railway）のマネージドバックアップ。自動日次バックアップ＋手動スナップショット対応。' },
+      { label: 'ファイルバージョニング', status: '✅', detail: 'アップロード時はバージョン管理。上書き時も旧バージョンを保持。バージョンの物理削除禁止。' },
+      { label: '暗号化', status: '✅', detail: 'パスワードはbcryptハッシュ。JWTトークンはHS256署名。DB接続はSSL/TLS暗号化。' },
     ];
 
     checks.forEach(c => {
@@ -257,10 +271,21 @@ const SuperAdmin = {
       </div>`;
     });
 
+    // 保護ポリシー概要
+    html += `<div style="margin-top:16px;padding:12px;background:var(--bg-tertiary);border-radius:8px;border-left:3px solid var(--primary);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">📋 データ保護ポリシー</div>
+      <div style="font-size:12px;line-height:1.8;color:var(--text-secondary);">
+        <strong>保護対象：</strong>ユーザーがアップロード・作成した全データ（ファイル・設定・コンテンツ・操作履歴）<br>
+        <strong>絶対原則：</strong>いかなるシステム修正・アップデート・マイグレーションにおいてもユーザーデータの削除・破壊・上書きは禁止<br>
+        <strong>削除復元：</strong>論理削除後90日間は復元可能。「ユーザー管理」タブから復元ボタンで即座に復旧<br>
+        <strong>バックアップ保持：</strong>PostgreSQL日次自動バックアップ（Railway管理）
+      </div>
+    </div>`;
+
     // 手動バックアップ
     html += `<div style="margin-top:16px;">
       <button class="btn btn-primary" onclick="SuperAdmin.manualBackup()">💾 手動バックアップ実行</button>
-      <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">DBファイルをダウンロードします</span>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">PostgreSQLデータのスナップショットを取得</span>
     </div>`;
 
     return html;
@@ -503,7 +528,92 @@ const SuperAdmin = {
 
   // 手動バックアップ（DBダウンロード）
   manualBackup() {
-    App.addSystemMessage(Utils.createAlert('info', 'ℹ️', 'バックアップ：サーバーの <code>server/data/lce.db</code> ファイルをコピーしてください。自動ダウンロードはサーバー側エンドポイントが必要です。'));
+    App.addSystemMessage(Utils.createAlert('info', 'ℹ️', 'PostgreSQLバックアップ：Railwayダッシュボードの「Database」→「Backups」からスナップショットを作成できます。<br>ローカル保存：<code>pg_dump $DATABASE_URL > backup_$(date +%Y%m%d).sql</code>'));
+  },
+
+  // CSVエクスポート
+  async exportCSV() {
+    try {
+      const data = await ApiClient.getAdminUsers({ limit: 1000 });
+      const users = data.users || [];
+      if (users.length === 0) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'エクスポート対象がありません')); return; }
+
+      const headers = ['ID', '氏名', 'メール', 'プラン', 'ステータス', '加入日', '更新期限', '残日数', '最終ログイン'];
+      let csv = '\uFEFF' + headers.join(',') + '\n'; // BOM付きUTF-8
+      users.forEach(u => {
+        csv += [
+          u.id,
+          '"' + (u.name || '').replace(/"/g, '""') + '"',
+          '"' + (u.email || '') + '"',
+          u.plan || 'Free',
+          u.status || 'Active',
+          u.joined_at ? new Date(u.joined_at).toLocaleDateString('ja-JP') : '',
+          u.renewal_date ? new Date(u.renewal_date).toLocaleDateString('ja-JP') : '',
+          u.remaining_days != null ? u.remaining_days : '',
+          u.last_login ? new Date(u.last_login).toLocaleDateString('ja-JP') : ''
+        ].join(',') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `LCE_users_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      App.addSystemMessage(Utils.createAlert('success', '✅', `${users.length}件のユーザーデータをCSVエクスポートしました`));
+    } catch(e) {
+      App.addSystemMessage(Utils.createAlert('error', '❌', 'CSVエクスポートエラー: ' + e.message));
+    }
+  },
+
+  // 全選択トグル
+  toggleSelectAll(checkbox) {
+    document.querySelectorAll('.sa-user-check').forEach(cb => { cb.checked = checkbox.checked; });
+  },
+
+  // ソート
+  sortBy(col) {
+    App.addSystemMessage(Utils.createAlert('info', 'ℹ️', `${col}でソート機能はサーバー側API拡張後に有効化されます`));
+  },
+
+  // 一括延長
+  bulkRenewSelected() {
+    const checked = document.querySelectorAll('.sa-user-check:checked');
+    if (checked.length === 0) {
+      App.addSystemMessage(Utils.createAlert('warning', '⚠️', '延長するユーザーをチェックボックスで選択してください'));
+      return;
+    }
+
+    const ids = Array.from(checked).map(cb => ({ id: parseInt(cb.dataset.uid), name: cb.dataset.uname }));
+    const nameList = ids.map(u => u.name).join('、');
+    const oneYearLater = new Date(); oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+
+    let html = `<div class="glass-card highlight">
+      <div class="report-title">📅 一括契約延長（${ids.length}名）</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">対象: ${nameList}</div>
+      <div><label style="font-size:12px;font-weight:600;">新しい更新期限</label>
+        <input id="sBulkRenewDate" type="date" value="${oneYearLater.toISOString().slice(0,10)}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="SuperAdmin.executeBulkRenew([${ids.map(u => u.id).join(',')}])">📅 一括延長実行</button>
+        <button class="btn btn-secondary" onclick="SuperAdmin.show('users')">キャンセル</button>
+      </div>
+    </div>`;
+    App.addSystemMessage(html);
+  },
+
+  async executeBulkRenew(userIds) {
+    const renewal_date = document.getElementById('sBulkRenewDate')?.value;
+    if (!renewal_date) return;
+    let success = 0;
+    for (const id of userIds) {
+      try {
+        await ApiClient.updateAdminUser(id, { renewal_date });
+        success++;
+      } catch(e) { console.warn(`ユーザー${id}の延長失敗:`, e); }
+    }
+    App.addSystemMessage(Utils.createAlert('success', '✅', `${success}/${userIds.length}名の契約期限を更新しました`));
+    this.show('users');
   },
 
   /* ================================================================
