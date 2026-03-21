@@ -30,8 +30,8 @@ const SuperAdmin = {
     let html = `<div class="glass-card highlight">
       <div class="report-title">📊 最高管理者コンソール</div>
       <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;" id="superAdminTabs">
-        ${['users', 'dashboard', 'license', 'protection', 'guide'].map(t => {
-          const labels = { users:'👥 ユーザー', dashboard:'📋 加入状況', license:'🔑 ライセンス', protection:'🛡️ データ保護', guide:'📖 ガイド' };
+        ${['users', 'dashboard', 'license', 'protection', 'settings', 'guide'].map(t => {
+          const labels = { users:'👥 ユーザー', dashboard:'📋 加入状況', license:'🔑 ライセンス', protection:'🛡️ データ保護', settings:'⚙️ 設定', guide:'📖 ガイド' };
           return `<button class="btn ${tab === t ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="SuperAdmin.show('${t}')">${labels[t]}</button>`;
         }).join('')}
       </div>
@@ -43,6 +43,7 @@ const SuperAdmin = {
         case 'dashboard': html += await this.renderDashboard(); break;
         case 'license': html += await this.renderLicense(); break;
         case 'protection': html += this.renderProtection(); break;
+        case 'settings': html += this.renderSettings(); break;
         case 'guide': html += this.renderGuide(); break;
       }
     } catch(e) {
@@ -652,20 +653,74 @@ const SuperAdmin = {
       `;
       nav.appendChild(infoPanel);
     }
+  },
 
-    // 最高管理者のみ：コンソールリンク追加
-    if (this.isSuperAdmin()) {
-      const divider = document.createElement('div');
-      divider.className = 'nav-divider';
-      nav.appendChild(divider);
+  /* ================================================================
+   * 設定タブ（API設定・データ管理）
+   * ================================================================ */
+  renderSettings() {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const localUsage = settings.apiUsage || { tokens: 0, cost: 0, calls: 0 };
 
-      const item = document.createElement('div');
-      item.className = 'nav-item';
-      item.setAttribute('data-cmd', '/最高管理者');
-      item.innerHTML = '<span class="icon">📊</span> 最高管理者コンソール';
-      item.style.color = 'var(--accent-gold)';
-      item.style.fontWeight = '600';
-      nav.appendChild(item);
-    }
-  }
+    // ローカルデータ統計
+    const dataKeys = Object.keys(localStorage);
+    let totalSize = 0;
+    dataKeys.forEach(k => { totalSize += (localStorage.getItem(k) || '').length * 2; });
+    const sizeMB = (totalSize / 1024 / 1024).toFixed(2);
+
+    let html = `<div class="report-subtitle">🔑 OpenAI API設定</div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;color:var(--accent-cyan);margin-bottom:8px;">APIキーを入力するとAI資料生成（/資料）が利用可能になります</div>
+        <input id="saApiKey" type="password" value="${settings.openaiApiKey || ''}" placeholder="sk-..." style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:var(--border-radius-sm);color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">
+      </div>
+      <div style="margin-bottom:16px;">
+        <select id="saApiModel" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:var(--border-radius-sm);color:var(--text-primary);font-size:13px;">
+          <option value="gpt-4o-mini" ${(settings.openaiModel || 'gpt-4o-mini') === 'gpt-4o-mini' ? 'selected' : ''}>gpt-4o-mini（低コスト・高速）</option>
+          <option value="gpt-4o" ${settings.openaiModel === 'gpt-4o' ? 'selected' : ''}>gpt-4o（高精度）</option>
+          <option value="gpt-4-turbo" ${settings.openaiModel === 'gpt-4-turbo' ? 'selected' : ''}>gpt-4-turbo</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="SuperAdmin.saveApiSettings()">💾 API設定を保存</button>
+
+      <div class="report-subtitle" style="margin-top:20px;">📊 API使用量</div>`;
+    html += Utils.createTable(['項目', '値'], [
+      ['累計API呼出回数', `${localUsage.calls || 0}回`],
+      ['累計トークン使用量', `${(localUsage.tokens || 0).toLocaleString()} tokens`],
+      ['累計推定コスト', `$${(localUsage.cost || 0).toFixed(4)}（約${Math.ceil((localUsage.cost || 0) * 150)}円）`],
+    ]);
+
+    html += `<div class="report-subtitle" style="margin-top:20px;">🛡️ ローカルデータ</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
+        <div class="glass-card" style="padding:14px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--primary-light);">${dataKeys.length}</div>
+          <div style="font-size:11px;color:var(--text-muted);">保存項目数</div>
+        </div>
+        <div class="glass-card" style="padding:14px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--accent-cyan);">${sizeMB} MB</div>
+          <div style="font-size:11px;color:var(--text-muted);">データ使用量</div>
+        </div>
+      </div>
+
+      <div class="report-subtitle">💾 データ管理</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+        <button class="btn btn-primary" onclick="Database.exportAll()">📥 エクスポート</button>
+        <button class="btn btn-secondary" onclick="Database.importData()">📤 インポート</button>
+      </div>
+
+      <div class="report-subtitle">🗑️ データ初期化</div>
+      <button class="btn btn-sm" style="background:var(--accent-red);color:white;" onclick="App.confirmClear()">⚠️ 全データを初期化</button>`;
+
+    return html;
+  },
+
+  // API設定保存
+  saveApiSettings() {
+    const apiKey = document.getElementById('saApiKey')?.value.trim();
+    const model = document.getElementById('saApiModel')?.value;
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    settings.openaiApiKey = apiKey;
+    settings.openaiModel = model;
+    Database.save(Database.KEYS.SETTINGS, settings);
+    App.addSystemMessage(Utils.createAlert('success', '✅', 'API設定を保存しました。<code>/資料</code> でAI資料生成が利用可能です。'));
+  },
 };
