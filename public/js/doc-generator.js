@@ -1669,62 +1669,123 @@ ${bankProfiles[target] || bankProfiles.general}
           <input id="cf_repay" value="${dna.repaymentSource||''}" placeholder="例: 本業利益＋減価償却費" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
       </div>
 
+      <div class="report-subtitle">🏭 設備資金の場合</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div><label style="font-size:11px;color:var(--text-muted);">設備の内容</label>
+          <input id="cf_equipment" value="${dna.equipment||''}" placeholder="例: 工作機械MC-500" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">設備金額（万円）</label>
+          <input id="cf_equipCost" type="number" value="${dna.equipmentCost||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text-muted);">導入効果</label>
+          <input id="cf_equipEffect" value="${dna.equipmentEffect||''}" placeholder="例: 生産能力30%向上、月間コスト50万削減" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+      </div>
+
+      <div class="report-subtitle">📊 決算データ（直近3期・万円）</div>
+      <div style="margin-bottom:16px;overflow-x:auto;">
+        <div style="display:grid;grid-template-columns:70px repeat(5,1fr);gap:4px;font-size:10px;color:var(--text-muted);min-width:500px;">
+          <span>期</span><span>売上</span><span>営利</span><span>経利</span><span>純利</span><span>償却</span>
+        </div>
+        ${[1,2,3].map(i => { const f = (dna.financials && dna.financials[i-1]) || {}; return `<div style="display:grid;grid-template-columns:70px repeat(5,1fr);gap:4px;margin-top:3px;min-width:500px;">
+          <input id="cf_fy${i}_year" value="${f.year||''}" placeholder="${i}期前" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_fy${i}_rev" type="number" value="${f.revenue||''}" placeholder="売上" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_fy${i}_op" type="number" value="${f.operatingProfit||''}" placeholder="営利" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_fy${i}_ord" type="number" value="${f.ordinaryProfit||''}" placeholder="経利" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_fy${i}_net" type="number" value="${f.netIncome||''}" placeholder="純利" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_fy${i}_dep" type="number" value="${f.depreciation||''}" placeholder="償却" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+        </div>`; }).join('')}
+      </div>
+
+      <div class="report-subtitle">🏦 既存借入一覧</div>
+      <div style="margin-bottom:16px;overflow-x:auto;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;font-size:10px;color:var(--text-muted);min-width:400px;">
+          <span>金融機関</span><span>残高(万)</span><span>月返済(万)</span><span>残月数</span>
+        </div>
+        ${[1,2,3].map(i => { const b = (dna.existingLoans && dna.existingLoans[i-1]) || {}; return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;margin-top:3px;min-width:400px;">
+          <input id="cf_el${i}_bank" value="${b.bank||''}" placeholder="銀行${i}" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_el${i}_bal" type="number" value="${b.balance||''}" placeholder="残高" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_el${i}_mon" type="number" value="${b.monthly||''}" placeholder="月返済" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+          <input id="cf_el${i}_rem" type="number" value="${b.remainMonths||''}" placeholder="残月" style="padding:5px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;">
+        </div>`; }).join('')}
+      </div>
+
+      <div class="report-subtitle">⚠️ 審査チェック項目</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div><label style="font-size:11px;color:var(--text-muted);">決算期</label>
+          <select id="cf_fiscal" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            ${[3,6,9,12,1,2,4,5,7,8,10,11].map(m => `<option value="${m}" ${(dna.fiscalMonth||3)==m?'selected':''}>${m}月決算</option>`).join('')}
+          </select></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">税金滞納</label>
+          <select id="cf_tax" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            <option value="なし" ${(dna.taxDelinquent||'なし')==='なし'?'selected':''}>なし</option>
+            <option value="分納中" ${(dna.taxDelinquent||'')==='分納中'?'selected':''}>あり（分納中）</option>
+            <option value="未対応" ${(dna.taxDelinquent||'')==='未対応'?'selected':''}>あり（未対応）</option>
+          </select></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">担保提供可能な不動産</label>
+          <input id="cf_collateral" value="${dna.collateral||''}" placeholder="例: 本社土地建物（評価額3,000万）" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">保証人</label>
+          <select id="cf_guarantor" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            <option value="代表者" ${(dna.guarantor||'代表者')==='代表者'?'selected':''}>代表者</option>
+            <option value="第三者" ${(dna.guarantor||'')==='第三者'?'selected':''}>第三者保証あり</option>
+            <option value="不要" ${(dna.guarantor||'')==='不要'?'selected':''}>保証不要希望</option>
+          </select></div>
+      </div>
+
       <div class="report-subtitle">🤝 主要取引先（上位5社）</div>
       <div style="margin-bottom:16px;">
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;font-size:11px;color:var(--text-muted);padding:0 4px;">
-          <span>取引先名</span><span>年間取引額（万円）</span><span>取引年数</span>
+          <span>取引先名</span><span>年間取引額（万）</span><span>取引年数</span>
         </div>
-        ${[1,2,3,4,5].map(i => `<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;margin-top:4px;">
-          <input id="cf_client${i}" placeholder="取引先${i}" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
-          <input id="cf_client${i}_amount" type="number" placeholder="額" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
-          <input id="cf_client${i}_years" type="number" placeholder="年" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
-        </div>`).join('')}
+        ${[1,2,3,4,5].map(i => { const cl = (dna.clients && dna.clients[i-1]) || {}; return `<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;margin-top:4px;">
+          <input id="cf_client${i}" value="${cl.name||''}" placeholder="取引先${i}" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+          <input id="cf_client${i}_amount" type="number" value="${cl.amount||''}" placeholder="額" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+          <input id="cf_client${i}_years" type="number" value="${cl.years||''}" placeholder="年" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+        </div>`; }).join('')}
       </div>
 
       <div class="report-subtitle">📝 補足・強み</div>
       <textarea id="cf_notes" rows="3" placeholder="競争優位性・業界でのポジション・特許・認定等" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;resize:vertical;">${dna.competitiveAdvantage||''}</textarea>
 
       <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="DocGenerator.executeCaseGeneration()" style="font-size:14px;padding:12px 24px;">
-          🚀 全資料を一括生成
-        </button>
-        <button class="btn btn-secondary" onclick="DocGenerator.saveCaseData()">
-          💾 入力内容を保存
-        </button>
+        <button class="btn btn-primary" onclick="DocGenerator.executeCaseGeneration()" style="font-size:14px;padding:12px 24px;">🚀 全資料を一括生成</button>
+        <button class="btn btn-secondary" onclick="DocGenerator.saveCaseData()">💾 入力内容を保存</button>
       </div>
     </div>`;
     App.addSystemMessage(html);
   },
 
-  // 案件データを保存
+  // 案件データを保存（DNAと完全連携）
   saveCaseData() {
-    const getData = id => document.getElementById(id)?.value || '';
+    const g = id => document.getElementById(id)?.value || '';
     const dna = Database.loadCompanyData() || {};
-    dna.companyName = getData('cf_company');
-    dna.industry = getData('cf_industry');
-    dna.representative = getData('cf_representative');
-    dna.yearsInBusiness = getData('cf_years');
-    dna.employeeCount = getData('cf_employees');
-    dna.businessModel = getData('cf_model');
-    dna.annualRevenue = getData('cf_revenue');
-    dna.operatingProfit = getData('cf_op');
-    dna.ordinaryProfit = getData('cf_ordinary');
-    dna.totalAssets = getData('cf_assets');
-    dna.netAssets = getData('cf_netassets');
-    dna.totalDebt = getData('cf_debt');
-    dna.loanAmount = getData('cf_loan');
-    dna.loanPurpose = getData('cf_purpose');
-    dna.mainBank = getData('cf_bank');
-    dna.repaymentSource = getData('cf_repay');
-    dna.competitiveAdvantage = getData('cf_notes');
-    // 取引先情報
+    Object.assign(dna, {
+      companyName: g('cf_company'), industry: g('cf_industry'), representative: g('cf_representative'),
+      yearsInBusiness: g('cf_years'), employeeCount: g('cf_employees'), businessModel: g('cf_model'),
+      annualRevenue: g('cf_revenue'), operatingProfit: g('cf_op'), ordinaryProfit: g('cf_ordinary'),
+      totalAssets: g('cf_assets'), netAssets: g('cf_netassets'), totalDebt: g('cf_debt'),
+      loanAmount: g('cf_loan'), loanPurpose: g('cf_purpose'), mainBank: g('cf_bank'), repaymentSource: g('cf_repay'),
+      equipment: g('cf_equipment'), equipmentCost: g('cf_equipCost'), equipmentEffect: g('cf_equipEffect'),
+      fiscalMonth: g('cf_fiscal'), taxDelinquent: g('cf_tax'), collateral: g('cf_collateral'), guarantor: g('cf_guarantor'),
+      competitiveAdvantage: g('cf_notes'),
+    });
+    // 決算3期分
+    dna.financials = [];
+    for (let i = 1; i <= 3; i++) {
+      const year = g(`cf_fy${i}_year`);
+      if (year || g(`cf_fy${i}_rev`)) dna.financials.push({ year, revenue: g(`cf_fy${i}_rev`), operatingProfit: g(`cf_fy${i}_op`), ordinaryProfit: g(`cf_fy${i}_ord`), netIncome: g(`cf_fy${i}_net`), depreciation: g(`cf_fy${i}_dep`) });
+    }
+    // 既存借入
+    dna.existingLoans = [];
+    for (let i = 1; i <= 3; i++) {
+      const bank = g(`cf_el${i}_bank`);
+      if (bank) dna.existingLoans.push({ bank, balance: g(`cf_el${i}_bal`), monthly: g(`cf_el${i}_mon`), remainMonths: g(`cf_el${i}_rem`) });
+    }
+    // 取引先
     dna.clients = [];
     for (let i = 1; i <= 5; i++) {
-      const name = getData(`cf_client${i}`);
-      if (name) dna.clients.push({ name, amount: getData(`cf_client${i}_amount`), years: getData(`cf_client${i}_years`) });
+      const name = g(`cf_client${i}`);
+      if (name) dna.clients.push({ name, amount: g(`cf_client${i}_amount`), years: g(`cf_client${i}_years`) });
     }
     Database.saveCompanyData(dna);
-    App.addSystemMessage(Utils.createAlert('success', '✅', '案件データを保存しました。DNAデータにも反映されています。'));
+    App.addSystemMessage(Utils.createAlert('success', '✅', '案件データを保存しました。企業DNA・決算・借入・取引先すべて反映済みです。'));
   },
 
   // 案件から全資料一括生成
