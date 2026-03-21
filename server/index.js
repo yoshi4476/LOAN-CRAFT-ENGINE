@@ -35,7 +35,7 @@ async function startServer() {
   if (!defaultUser) {
     const bcrypt = require('bcryptjs');
     dbRun('INSERT INTO users (name, email, password_hash, role, plan) VALUES (?, ?, ?, ?, ?)',
-      ['ユーザー', 'default@local', bcrypt.hashSync('default', 10), 'user', 'Free']);
+      ['管理者', process.env.SUPER_ADMIN_EMAIL || 'y.wakata.linkdesign@gmail.com', bcrypt.hashSync('default', 10), 'super_admin', 'Free']);
     console.log('  ✅ デフォルトユーザーを作成しました');
   }
 

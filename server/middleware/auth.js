@@ -15,8 +15,8 @@ function authenticate(req, res, next) {
       // トークン無効でもデフォルトユーザーで続行
     }
   }
-  // デフォルトユーザー（ログイン不要モード）
-  req.user = { id: 1, email: 'default@local', name: 'ユーザー', role: 'user' };
+  // デフォルトユーザー（ログイン不要モード — 最高管理者として動作）
+  req.user = { id: 1, email: SUPER_ADMIN, name: '管理者', role: 'super_admin' };
   next();
 }
 
