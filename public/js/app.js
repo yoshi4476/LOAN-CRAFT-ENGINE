@@ -186,14 +186,19 @@ const App = {
   },
 
   // コマンド実行（ページ切替方式：前の表示をクリアして新規表示）
-  executeCommand(cmdText) {
+  async executeCommand(cmdText) {
     const cmdBase = cmdText.split(' ')[0].toLowerCase();
     const matched = this.commands.find(c => c.cmd === cmdBase || c.cmd === cmdText.split(' ')[0]);
     if (matched) {
       // チャットエリアをクリアして切替表示
       const chatMessages = document.getElementById('chatMessages');
       if (chatMessages) chatMessages.innerHTML = '';
-      matched.fn();
+      try {
+        await matched.fn();
+      } catch(e) {
+        console.error('コマンド実行エラー:', e);
+        this.addSystemMessage(Utils.createAlert('error', '❌', `エラー: ${e.message}`));
+      }
     } else {
       // 資料個別生成
       if (cmdText.startsWith('/資料 ') || cmdText.startsWith('/資料　')) {
