@@ -30,8 +30,8 @@ const SuperAdmin = {
     let html = `<div class="glass-card highlight">
       <div class="report-title">📊 最高管理者コンソール</div>
       <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;" id="superAdminTabs">
-        ${['users', 'dashboard', 'license', 'protection', 'settings', 'guide'].map(t => {
-          const labels = { users:'👥 ユーザー', dashboard:'📋 加入状況', license:'🔑 ライセンス', protection:'🛡️ データ保護', settings:'⚙️ 設定', guide:'📖 ガイド' };
+        ${['users', 'dashboard', 'license', 'protection', 'settings', 'guide', 'saas'].map(t => {
+          const labels = { users:'👥 ユーザー', dashboard:'📋 加入状況', license:'🔑 ライセンス', protection:'🛡️ データ保護', settings:'⚙️ 設定', guide:'📖 ガイド', saas:'🚀 SaaS管理' };
           return `<button class="btn ${tab === t ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="SuperAdmin.show('${t}')">${labels[t]}</button>`;
         }).join('')}
       </div>
@@ -45,6 +45,7 @@ const SuperAdmin = {
         case 'protection': html += this.renderProtection(); break;
         case 'settings': html += this.renderSettings(); break;
         case 'guide': html += this.renderGuide(); break;
+        case 'saas': html += this.renderSaaS(); break;
       }
     } catch(e) {
       html += Utils.createAlert('error', '❌', `データ取得エラー: ${e.message}`);
