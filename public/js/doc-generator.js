@@ -184,19 +184,12 @@ const DocGenerator = {
     const userPrompt = this.buildAIPrompt(docId, data, rr, target, custom);
 
     try {
-      let responseData;
-      if (typeof ApiClient !== 'undefined' && ApiClient.getToken()) {
-        responseData = await ApiClient.generateAI({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 });
-      } else {
-        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
-        });
-        responseData = await resp.json();
-        if (responseData.error) throw new Error(responseData.error.message);
-        if (responseData.usage) Admin.trackApiUsage(responseData.usage.prompt_tokens || 0, responseData.usage.completion_tokens || 0, model);
-      }
+      // サーバー経由でAI生成（APIキーはサーバー側で管理）
+      const responseData = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
+      });
+      if (!responseData || responseData.error) throw new Error(responseData?.error || 'サーバー接続エラー');
 
       const content = responseData.choices[0].message.content;
       const usage = responseData.usage || {};
@@ -1889,13 +1882,11 @@ ${bankProfiles[target] || bankProfiles.general}
 
       try {
         const userPrompt = AIEngine.buildUserPrompt(doc.id, dna, rr, 'general', '');
-        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        const data = await ApiClient.request('/api/ai/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
           body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
         });
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error.message);
+        if (!data || data.error) throw new Error(data?.error || 'API通信エラー');
         if (data.usage) Admin.trackApiUsage(data.usage.prompt_tokens||0, data.usage.completion_tokens||0, model);
         results.push({ ...doc, content: data.choices[0].message.content, tokens: data.usage?.total_tokens || 0 });
       } catch(err) {

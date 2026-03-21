@@ -91,22 +91,12 @@ const AIEngine = {
     const userPrompt = this.buildUserPrompt(docType, dna, customPrompt);
 
     try {
-      // サーバーAPI可能ならプロキシ経由
-      let data;
-      if (typeof ApiClient !== 'undefined' && ApiClient.getToken()) {
-        data = await ApiClient.generateAI({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 });
-      } else {
-        // ローカルから直接API呼出
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
-        });
-        data = await response.json();
-        if (data.error) throw new Error(data.error.message);
-        // ローカル使用量記録
-        if (data.usage) Admin.trackApiUsage(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0, model);
-      }
+      // サーバー経由でAI生成（APIキーはサーバー側で管理）
+      const data = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
+      });
+      if (!data || data.error) throw new Error(data?.error || 'サーバー接続エラー');
 
       const content = data.choices[0].message.content;
       const usage = data.usage || {};
