@@ -91,12 +91,24 @@ const AIEngine = {
     const userPrompt = this.buildUserPrompt(docType, dna, customPrompt);
 
     try {
-      // サーバー経由でAI生成（APIキーはサーバー側で管理）
-      const data = await ApiClient.request('/api/ai/generate', {
-        method: 'POST',
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
-      });
-      if (!data || data.error) throw new Error(data?.error || 'サーバー接続エラー');
+      // サーバー経由を優先、フォールバックでローカル直接呼出
+      let data;
+      try {
+        data = await ApiClient.request('/api/ai/generate', {
+          method: 'POST',
+          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
+        });
+        if (!data) throw new Error('no data');
+      } catch(serverErr) {
+        if (!apiKey) throw new Error('APIキーが未設定です。最高管理者コンソールから設定してください。');
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
+        });
+        data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+      }
 
       const content = data.choices[0].message.content;
       const usage = data.usage || {};
