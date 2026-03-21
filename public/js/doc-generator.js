@@ -67,7 +67,7 @@ const DocGenerator = {
 
     // 生成方法の選択（APIはバックグラウンドで自動判定）
     html += `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="DocGenerator.showDocGrid(${apiKey ? ''ai'' : ''template''})">
+      <button class="btn btn-primary" onclick="DocGenerator.showDocGrid(${apiKey ? 'ai' : 'template'})">
         📄 資料を生成
       </button>
       <button class="btn btn-secondary" onclick="DocGenerator.showCaseForm()" style="background:linear-gradient(135deg,var(--accent-gold),var(--accent-orange));color:white;border:none;">
