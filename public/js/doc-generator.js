@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - 統合資料生成エンジン
  * DNA＋案件データ → AIが銀行提出レベルの書類を自動生成
  * テンプレ版とAI版を統合、10種類の資料＋整合チェック
@@ -70,7 +70,7 @@ const DocGenerator = {
     <div id="docGridContainer"></div>
     </div>`;
 
-    App.addSystemMessage(html);
+    const cm=document.getElementById("chatMessages"); if(cm) cm.innerHTML=html;
 
     // デフォルトでAIキーがあればAI、なければテンプレ
     this.showDocGrid(apiKey ? 'ai' : 'template');
@@ -179,12 +179,12 @@ const DocGenerator = {
     try {
       let responseData;
       if (typeof ApiClient !== 'undefined' && ApiClient.getToken()) {
-        responseData = await ApiClient.generateAI({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.3 });
+        responseData = await ApiClient.generateAI({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 });
       } else {
         const resp = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.3 })
+          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
         });
         responseData = await resp.json();
         if (responseData.error) throw new Error(responseData.error.message);
@@ -245,28 +245,70 @@ const DocGenerator = {
   },
 
   /* ================================================================
-   * 生成結果表示
+   * 生成結果表示（全画面ドキュメントビュー）
    * ================================================================ */
   showGeneratedDoc(docInfo, content, usage, mode) {
     const docId = docInfo.id;
-    const html = `<div class="glass-card highlight">
-      <div class="report-title">${docInfo.icon} AI生成: ${docInfo.name}</div>
-      <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:12px;">
+    const rendered = this.renderMarkdown(content);
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) chatMessages.innerHTML = '';
+    const html = `<div class="glass-card highlight" style="max-width:900px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="report-title" style="margin:0;">${docInfo.icon} ${docInfo.name}</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-primary btn-sm" onclick="DocGenerator.downloadPDF('${docId}', '${docInfo.name}')">📥 PDF</button>
+          <button class="btn btn-primary btn-sm" onclick="DocGenerator.copyToClipboard()">📋 コピー</button>
+          <button class="btn btn-secondary btn-sm" onclick="DocGenerator.saveDocument('${docId}', '${docInfo.name}')">💾 保存</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:20px;border-bottom:1px solid var(--border-secondary);padding-bottom:12px;">
         <span>🤖 AI生成</span>
         <span>トークン: ${(usage.total_tokens || 0).toLocaleString()}</span>
         <span>${new Date().toLocaleTimeString('ja-JP')}</span>
       </div>
-      <div id="docContent_${docId}" style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
-      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="DocGenerator.downloadPDF('${docId}', '${docInfo.name}')">📥 PDF保存</button>
-        <button class="btn btn-primary btn-sm" onclick="DocGenerator.copyToClipboard()">📋 コピー</button>
+      <div id="docContent_${docId}" class="doc-viewer" style="font-size:13px;line-height:2.0;color:var(--text-primary);">${rendered}</div>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-secondary);display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-secondary btn-sm" onclick="DocGenerator.toggleEdit('${docId}')">✏️ 編集</button>
-        <button class="btn btn-secondary btn-sm" onclick="DocGenerator.saveDocument('${docId}', '${docInfo.name}')">💾 保存</button>
         <button class="btn btn-secondary btn-sm" onclick="DocGenerator.generate('${docId}', 'ai')">🔄 再生成</button>
         <button class="btn btn-secondary btn-sm" onclick="DocGenerator.showMenu()">📄 他の資料</button>
       </div>
     </div>`;
-    App.addSystemMessage(html);
+    if (chatMessages) chatMessages.innerHTML = html;
+  },
+
+  // Markdown→HTML簡易レンダリング
+  renderMarkdown(text) {
+    let html = Utils.escapeHtml(text);
+    // 見出し
+    html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:700;color:var(--primary-light);margin:20px 0 8px;border-left:3px solid var(--primary);padding-left:10px;">$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;color:var(--text-primary);margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-secondary);">$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:20px;font-weight:800;color:var(--text-primary);margin:24px 0 16px;">$1</h1>');
+    // 太字
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // テーブル（Markdown表）
+    html = html.replace(/^\|(.+)\|$/gm, (match) => {
+      const cells = match.split('|').filter(c => c.trim() !== '');
+      if (cells.every(c => /^[\s-:]+$/.test(c))) return '';
+      const isHeader = cells.some(c => /^\s*---/.test(c));
+      if (isHeader) return '';
+      const tds = cells.map(c => `<td style="padding:8px 12px;border:1px solid var(--border-secondary);">${c.trim()}</td>`).join('');
+      return `<tr>${tds}</tr>`;
+    });
+    html = html.replace(/(<tr>.+<\/tr>\n?)+/g, (match) => {
+      const rows = match.trim().split('\n').filter(r => r.trim());
+      if (rows.length === 0) return match;
+      const firstRow = rows[0].replace(/<td/g, '<th').replace(/<\/td/g, '</th');
+      const rest = rows.slice(1).join('\n');
+      return `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">${firstRow}${rest}</table>`;
+    });
+    // 箇条書き
+    html = html.replace(/^[\-\*] (.+)$/gm, '<li style="margin:4px 0;padding-left:4px;">$1</li>');
+    html = html.replace(/(<li.+<\/li>\n?)+/g, '<ul style="margin:8px 0 8px 16px;list-style:disc;">$&</ul>');
+    // 番号付き
+    html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin:4px 0;">$1</li>');
+    // 改行
+    html = html.replace(/\n/g, '<br>');
+    return html;
   },
 
   /* ================================================================
@@ -413,7 +455,7 @@ const DocGenerator = {
       </div>`;
     });
     html += `</div>`;
-    App.addSystemMessage(html);
+    const cm=document.getElementById("chatMessages"); if(cm) cm.innerHTML=html;
   },
 
   loadSavedDoc(key) {
@@ -1552,7 +1594,7 @@ ${bankProfiles[target] || bankProfiles.general}
     const allOk = checks.every(c => c.ok);
     html += allOk ? Utils.createAlert('success','✅','全項目の整合性OK') : Utils.createAlert('warning','⚠️','不整合あり。修正が必要です。');
     html += `</div>`;
-    App.addSystemMessage(html);
+    const cm=document.getElementById("chatMessages"); if(cm) cm.innerHTML=html;
   },
 
   /* ================================================================
@@ -1574,7 +1616,7 @@ ${bankProfiles[target] || bankProfiles.general}
       </div>`;
     });
     html += `</div>`;
-    App.addSystemMessage(html);
+    const cm=document.getElementById("chatMessages"); if(cm) cm.innerHTML=html;
   },
 
   showHistoryItem(index) {
@@ -1749,7 +1791,7 @@ ${bankProfiles[target] || bankProfiles.general}
         <button class="btn btn-secondary" onclick="DocGenerator.saveCaseData()">💾 入力内容を保存</button>
       </div>
     </div>`;
-    App.addSystemMessage(html);
+    const cm=document.getElementById("chatMessages"); if(cm) cm.innerHTML=html;
   },
 
   // 案件データを保存（DNAと完全連携）
@@ -1812,7 +1854,7 @@ ${bankProfiles[target] || bankProfiles.general}
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.3 })
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 8000, temperature: 0.3 })
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
