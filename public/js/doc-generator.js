@@ -63,6 +63,9 @@ const DocGenerator = {
       <button class="btn btn-secondary" onclick="DocGenerator.showDocGrid('template')" id="docModeTemplate">
         📋 テンプレート生成
       </button>
+      <button class="btn btn-secondary" onclick="DocGenerator.showCaseForm()" style="background:linear-gradient(135deg,var(--accent-gold),var(--accent-orange));color:white;border:none;">
+        📂 案件自動作成
+      </button>
     </div>
     <div id="docGridContainer"></div>
     </div>`;
@@ -1601,6 +1604,174 @@ ${bankProfiles[target] || bankProfiles.general}
 
   // 後方互換（旧Documents, AIEngine呼び出し用）
   generateAll_compat() { this.showMenu(); },
+
+  /* ================================================================
+   * 案件自動作成フォーム（要項を埋めるだけで資料一括生成）
+   * ================================================================ */
+  showCaseForm() {
+    const dna = Database.loadCompanyData() || {};
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) chatMessages.innerHTML = '';
+
+    let html = `<div class="glass-card highlight">
+      <div class="report-title">📂 案件自動作成</div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+        要項を埋めるだけで、融資申請に必要な全資料を自動生成します。入力済みのDNAデータは自動反映されます。
+      </p>
+
+      <div class="report-subtitle">🏢 基本情報</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div><label style="font-size:11px;color:var(--text-muted);">会社名 *</label>
+          <input id="cf_company" value="${dna.companyName||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">業種 *</label>
+          <input id="cf_industry" value="${dna.industry||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">代表者名</label>
+          <input id="cf_representative" value="${dna.representative||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">業歴（年）</label>
+          <input id="cf_years" type="number" value="${dna.yearsInBusiness||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">従業員数</label>
+          <input id="cf_employees" type="number" value="${dna.employeeCount||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">事業モデル</label>
+          <input id="cf_model" value="${dna.businessModel||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+      </div>
+
+      <div class="report-subtitle">💰 財務情報（万円）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div><label style="font-size:11px;color:var(--text-muted);">年商 *</label>
+          <input id="cf_revenue" type="number" value="${dna.annualRevenue||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">営業利益</label>
+          <input id="cf_op" type="number" value="${dna.operatingProfit||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">経常利益</label>
+          <input id="cf_ordinary" type="number" value="${dna.ordinaryProfit||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">総資産</label>
+          <input id="cf_assets" type="number" value="${dna.totalAssets||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">純資産</label>
+          <input id="cf_netassets" type="number" value="${dna.netAssets||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">有利子負債</label>
+          <input id="cf_debt" type="number" value="${dna.totalDebt||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+      </div>
+
+      <div class="report-subtitle">🏦 融資条件</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div><label style="font-size:11px;color:var(--text-muted);">融資希望額（万円） *</label>
+          <input id="cf_loan" type="number" value="${dna.loanAmount||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">資金使途 *</label>
+          <select id="cf_purpose" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            <option value="">選択してください</option>
+            <option ${dna.loanPurpose==='運転資金'?'selected':''}>運転資金</option>
+            <option ${dna.loanPurpose==='設備資金'?'selected':''}>設備資金</option>
+            <option ${dna.loanPurpose==='運転+設備'?'selected':''}>運転+設備</option>
+            <option ${dna.loanPurpose==='借換'?'selected':''}>借換</option>
+          </select></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">申込先金融機関</label>
+          <input id="cf_bank" value="${dna.mainBank||''}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);">返済原資</label>
+          <input id="cf_repay" value="${dna.repaymentSource||''}" placeholder="例: 本業利益＋減価償却費" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;"></div>
+      </div>
+
+      <div class="report-subtitle">🤝 主要取引先（上位5社）</div>
+      <div style="margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;font-size:11px;color:var(--text-muted);padding:0 4px;">
+          <span>取引先名</span><span>年間取引額（万円）</span><span>取引年数</span>
+        </div>
+        ${[1,2,3,4,5].map(i => `<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px;margin-top:4px;">
+          <input id="cf_client${i}" placeholder="取引先${i}" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+          <input id="cf_client${i}_amount" type="number" placeholder="額" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+          <input id="cf_client${i}_years" type="number" placeholder="年" style="padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+        </div>`).join('')}
+      </div>
+
+      <div class="report-subtitle">📝 補足・強み</div>
+      <textarea id="cf_notes" rows="3" placeholder="競争優位性・業界でのポジション・特許・認定等" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;resize:vertical;">${dna.competitiveAdvantage||''}</textarea>
+
+      <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="DocGenerator.executeCaseGeneration()" style="font-size:14px;padding:12px 24px;">
+          🚀 全資料を一括生成
+        </button>
+        <button class="btn btn-secondary" onclick="DocGenerator.saveCaseData()">
+          💾 入力内容を保存
+        </button>
+      </div>
+    </div>`;
+    App.addSystemMessage(html);
+  },
+
+  // 案件データを保存
+  saveCaseData() {
+    const getData = id => document.getElementById(id)?.value || '';
+    const dna = Database.loadCompanyData() || {};
+    dna.companyName = getData('cf_company');
+    dna.industry = getData('cf_industry');
+    dna.representative = getData('cf_representative');
+    dna.yearsInBusiness = getData('cf_years');
+    dna.employeeCount = getData('cf_employees');
+    dna.businessModel = getData('cf_model');
+    dna.annualRevenue = getData('cf_revenue');
+    dna.operatingProfit = getData('cf_op');
+    dna.ordinaryProfit = getData('cf_ordinary');
+    dna.totalAssets = getData('cf_assets');
+    dna.netAssets = getData('cf_netassets');
+    dna.totalDebt = getData('cf_debt');
+    dna.loanAmount = getData('cf_loan');
+    dna.loanPurpose = getData('cf_purpose');
+    dna.mainBank = getData('cf_bank');
+    dna.repaymentSource = getData('cf_repay');
+    dna.competitiveAdvantage = getData('cf_notes');
+    // 取引先情報
+    dna.clients = [];
+    for (let i = 1; i <= 5; i++) {
+      const name = getData(`cf_client${i}`);
+      if (name) dna.clients.push({ name, amount: getData(`cf_client${i}_amount`), years: getData(`cf_client${i}_years`) });
+    }
+    Database.saveCompanyData(dna);
+    App.addSystemMessage(Utils.createAlert('success', '✅', '案件データを保存しました。DNAデータにも反映されています。'));
+  },
+
+  // 案件から全資料一括生成
+  async executeCaseGeneration() {
+    this.saveCaseData();
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      App.addSystemMessage(Utils.createAlert('error', '🔑', 'APIキーが未設定です。最高管理者コンソール → 設定タブから設定してください。'));
+      return;
+    }
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) chatMessages.innerHTML = '';
+    App.addSystemMessage(`<div class="glass-card" style="text-align:center;padding:32px;">
+      <div class="loading-spinner"></div>
+      <div style="margin-top:12px;font-size:14px;font-weight:600;">🚀 全資料を一括生成中...</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">案件概要書を生成しています。完了まで1〜2分お待ちください。</div>
+    </div>`);
+    // 案件概要書をAIで生成
+    try {
+      const dna = Database.loadCompanyData() || {};
+      const systemPrompt = AIEngine.buildSystemPrompt();
+      const userPrompt = AIEngine.buildUserPrompt('autoCase', dna, '');
+      const model = this.getModel();
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.3 })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message);
+      if (data.usage) Admin.trackApiUsage(data.usage.prompt_tokens||0, data.usage.completion_tokens||0, model);
+      const content = data.choices[0].message.content;
+      if (chatMessages) chatMessages.innerHTML = '';
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">📂 案件概要書（AI自動生成）</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">トークン: ${(data.usage?.total_tokens||0).toLocaleString()}</div>
+        <div style="font-size:13px;line-height:1.8;white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText(document.querySelector('.glass-card.highlight div[style*=pre-wrap]')?.textContent||'')">📋 コピー</button>
+          <button class="btn btn-secondary btn-sm" onclick="DocGenerator.showMenu()">📄 個別資料を生成</button>
+          <button class="btn btn-secondary btn-sm" onclick="DocGenerator.showCaseForm()">✏️ 要項を修正</button>
+        </div>
+      </div>`);
+    } catch(err) {
+      App.addSystemMessage(Utils.createAlert('error', '❌', `生成エラー: ${err.message}`));
+    }
+  },
 };
 
 // 後方互換エイリアス
