@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - 統合資料生成エンジン
  * DNA＋案件データ → AIが銀行提出レベルの書類を自動生成
  * テンプレ版とAI版を統合、10種類の資料＋整合チェック
@@ -6,7 +6,7 @@
 
 const DocGenerator = {
 
-  // 資料定義（10種類）
+  // 資料定義（20種類）
   docTypes: [
     { id: 'executive',   icon: '📋', name: 'エグゼクティブサマリー', tag: '必須',   desc: '支店長が最初に見るA4 1枚の概要' },
     { id: 'company',     icon: '🏢', name: '企業概要書',             tag: '必須',   desc: '事業の全体像（沿革・組織・事業内容）' },
@@ -14,6 +14,16 @@ const DocGenerator = {
     { id: 'cashflow',    icon: '💰', name: '資金繰り表',             tag: '必須',   desc: '月次12ヶ月分の入出金計画' },
     { id: 'repayplan',   icon: '📈', name: '返済計画書',             tag: '必須',   desc: '返済スケジュールと返済原資の根拠' },
     { id: 'debtlist',    icon: '📝', name: '借入金一覧表',           tag: '必須',   desc: '全借入の完全開示（鉄則）' },
+    { id: 'improvement', icon: '📈', name: '経営改善計画書',         tag: '必須',   desc: 'リスケ・業績悪化時の再建計画（数値付き）' },
+    { id: 'equipment',   icon: '🏭', name: '設備投資計画書',         tag: '必須',   desc: '設備概要・費用・効果・投資回収計画' },
+    { id: 'profile',     icon: '👤', name: '代表者略歴書',           tag: '必須',   desc: '経歴・資格・経営ビジョン（公庫必須）' },
+    { id: 'funduse',     icon: '💹', name: '資金使途明細書',         tag: '必須',   desc: '調達資金の使い道を項目別・金額別に説明' },
+    { id: 'monthly',     icon: '📅', name: '月次業績推移表',         tag: '効果大', desc: '直近24ヶ月の売上・利益・CFの推移' },
+    { id: 'collateral',  icon: '🏠', name: '担保評価書',             tag: '効果大', desc: '不動産・動産の評価額と担保設定状況' },
+    { id: 'clients',     icon: '🤝', name: '取引先一覧表',           tag: '効果大', desc: '主要取引先・取引額・取引年数・依存度' },
+    { id: 'permits',     icon: '📜', name: '許認可・資格一覧',       tag: '効果大', desc: '保有許認可・資格・認定・ISO等' },
+    { id: 'swot',        icon: '🎯', name: 'SWOT分析書',             tag: '効果大', desc: '強み・弱み・機会・脅威の4象限分析' },
+    { id: 'ringi',       icon: '🏦', name: '金融機関別稟議サポート', tag: '推奨',   desc: '銀行員が稟議書にそのまま使える資料' },
     { id: 'qa',          icon: '❓', name: '想定Q&A集',              tag: '効果大', desc: '面談で聞かれる質問＋模範回答15問' },
     { id: 'meeting',     icon: '🤝', name: '面談準備シート',         tag: '効果大', desc: '流れ・持ち物・NG集・シナリオ' },
     { id: 'strategy',    icon: '🎯', name: '融資戦略レポート',       tag: '推奨',   desc: '金融機関の優先順・金額配分' },
