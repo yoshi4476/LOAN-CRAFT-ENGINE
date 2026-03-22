@@ -1449,11 +1449,13 @@ body::before {
 
 /* --- レスポンシブ --- */
 @media (max-width: 768px) {
+  /* サイドバー：モバイルではオフキャンバス */
   .sidebar {
     position: fixed;
     left: 0;
     top: 0;
     height: 100vh;
+    width: 280px;
     transform: translateX(-100%);
     z-index: 200;
     box-shadow: var(--shadow-lg);
@@ -1464,38 +1466,497 @@ body::before {
   }
 
   .mobile-menu-btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ヘッダーをコンパクトに */
+  .main-header {
+    padding: 0 8px;
+    height: 48px;
+    position: relative;
+    z-index: 5;
+    overflow: hidden;
+  }
+
+  /* ヘッダー左側のgapを縮小 */
+  .main-header > div:first-child {
+    gap: 6px !important;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .header-title {
+    font-size: 12px;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-actions {
+    gap: 0;
+    flex-shrink: 0;
+  }
+
+  .header-btn {
+    padding: 6px;
+    font-size: 11px;
+    border: none;
+    background: transparent;
+  }
+
+  /* コマンドパレットボタンはモバイルでは非表示 */
+  .header-btn-cmdpalette {
+    display: none !important;
+  }
+
+  /* ヘッダーボタンのテキスト部分をモバイルで非表示 */
+  .header-btn-text {
+    display: none;
+  }
+
+  /* アイコン部分 */
+  .header-btn-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+
+
+  /* チャットエリア */
+  .chat-messages {
+    padding: 12px;
+    gap: 12px;
   }
 
   .chat-input-wrapper {
     max-width: 100%;
   }
 
-  .command-palette {
-    width: 90%;
-    margin: 0 5%;
+  .chat-input-container {
+    padding: 10px 12px 16px;
   }
 
-  .radar-container {
-    grid-template-columns: repeat(3, 1fr);
+  .chat-input {
+    padding: 10px 14px;
+    font-size: 16px; /* iOSズーム防止 */
   }
-}
 
-@media (max-width: 480px) {
-  .chat-messages {
-    padding: 16px;
+  .send-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+
+  .input-hint {
+    font-size: 10px;
+  }
+
+  /* メッセージ */
+  .message {
+    max-width: 100%;
   }
 
   .message-content {
-    padding: 12px 16px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .message-header {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  /* コマンドパレット */
+  .command-palette {
+    width: 94%;
+    margin: 0 3%;
+    max-height: 70vh;
+  }
+
+  .command-palette-overlay.active {
+    padding-top: 10vh;
+  }
+
+  .palette-input {
+    font-size: 14px;
+  }
+
+  .palette-item {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .palette-item .cmd-name {
+    min-width: auto;
+    font-size: 13px;
+  }
+
+  .palette-item .cmd-desc {
+    font-size: 12px;
+    width: 100%;
+  }
+
+  /* カード・パネル */
+  .glass-card {
+    padding: 14px;
+  }
+
+  /* データテーブル：横スクロール対応 */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* スコアカード */
+  .score-value {
+    font-size: 40px;
+  }
+
+  .score-grade {
+    font-size: 22px;
+    padding: 6px 18px;
+  }
+
+  /* 起動メッセージ */
+  .boot-message .boot-title {
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+
+  .boot-message .boot-subtitle {
+    font-size: 11px;
+  }
+
+  .boot-message .boot-header {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .boot-cta {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  /* レーダーチャート */
+  .radar-container {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .radar-bar {
+    height: 80px;
+  }
+
+  .radar-fill {
+    width: 30px;
+  }
+
+  /* レポート */
+  .report-title {
+    font-size: 14px;
+  }
+
+  .report-row {
+    font-size: 12px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .report-row .value {
+    font-size: 12px;
+  }
+
+  /* ドキュメントプレビュー */
+  .doc-preview {
+    padding: 16px;
+    font-size: 12px;
+    margin: 10px 0;
+  }
+
+  .doc-preview h1 {
+    font-size: 16px;
+  }
+
+  .doc-preview h2 {
+    font-size: 14px;
+  }
+
+  .doc-preview table th,
+  .doc-preview table td {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  /* フォームコントロール */
+  .form-input {
+    font-size: 16px; /* iOSズーム防止 */
+    padding: 10px 12px;
+  }
+
+  /* ボタン */
+  .btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  /* クイックオプション */
+  .quick-options {
+    gap: 6px;
+  }
+
+  .quick-option {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* フローチャート */
+  .flow-node {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  /* アラートカード */
+  .alert-card {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  /* ステータスバー */
+  .status-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  /* === JSインラインstyleで生成されるgridレイアウトをモバイルで上書き === */
+
+  /* 2カラム以上のgridを1カラムに強制 */
+  .message-content [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .message-content [style*="grid-template-columns:1fr 1fr 1fr"],
+  .message-content [style*="grid-template-columns: 1fr 1fr"],
+  .message-content [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 4カラムgridも1カラムに */
+  .message-content [style*="grid-template-columns: 1fr 1fr 1fr 1fr"],
+  .message-content [style*="grid-template-columns:1fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* auto-fitのminmaxを小さく調整 */
+  .message-content [style*="minmax(200px"],
+  .message-content [style*="minmax(220px"],
+  .message-content [style*="minmax(240px"],
+  .message-content [style*="minmax(250px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* repeat(5,1fr) や repeat(7,1fr) のような多カラムgridを横スクロール対応 */
+  .message-content [style*="repeat(5,1fr)"],
+  .message-content [style*="repeat(7,1fr)"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* マトリックスグリッド */
+  .matrix-grid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 10px;
+  }
+
+  .matrix-cell {
+    padding: 8px 6px;
+    font-size: 10px;
+    min-width: 60px;
+  }
+
+  /* インラインstyleのmin-widthを持つ要素を横スクロール対応 */
+  .message-content [style*="min-width"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* インラインstyleのflex要素をwrapに */
+  .message-content [style*="display:flex"][style*="gap"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* タグバッジ */
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
+
+  /* progress-bar */
+  .progress-bar {
+    height: 6px;
+  }
+
+  /* ステップインジケーター */
+  .step-line {
+    width: 24px;
+  }
+
+  /* 印刷可能ドキュメント内のテーブル横スクロール */
+  .doc-preview table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* KPIグリッド */
+  .doc-preview .kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* === 480px以下：さらに小さいスマホ向け === */
+@media (max-width: 480px) {
+  .main-header {
+    padding: 0 8px;
+    height: 50px;
+  }
+
+  .header-title {
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .header-btn {
+    padding: 5px 6px;
+    font-size: 10px;
+  }
+
+  .chat-messages {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .chat-input-container {
+    padding: 8px;
+  }
+
+  .message-content {
+    padding: 10px 12px;
+    font-size: 12px;
   }
 
   .glass-card {
-    padding: 16px;
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .boot-message .boot-title {
+    font-size: 14px;
+  }
+
+  /* 2カラムも全て1カラムに */
+  .message-content [style*="grid-template-columns: 1fr 1fr"],
+  .message-content [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .message-content [style*="grid-template-columns: 1fr 1fr 1fr 1fr"],
+  .message-content [style*="grid-template-columns:1fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
   }
 
   .radar-container {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .radar-bar {
+    height: 60px;
+  }
+
+  .radar-fill {
+    width: 24px;
+  }
+
+  .radar-item-label {
+    font-size: 10px;
+  }
+
+  /* ドキュメントプレビュー */
+  .doc-preview {
+    padding: 12px;
+  }
+
+  .doc-preview h1 {
+    font-size: 14px;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  .doc-preview h2 {
+    font-size: 13px;
+  }
+
+  /* クイックオプション：フル幅 */
+  .quick-option {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* スコア */
+  .score-value {
+    font-size: 32px;
+  }
+
+  .score-grade {
+    font-size: 18px;
+    padding: 5px 14px;
+  }
+
+  /* ナビステップ */
+  .nav-step-header {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .nav-step-body .nav-item {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  /* フォーム */
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .form-label {
+    font-size: 11px;
+  }
+
+  /* インラインstyleのindicatorGrid */
+  #indicatorGrid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ボタン群のレイアウト */
+  .message-content [style*="display:flex"][style*="gap:8px"] {
+    flex-direction: column !important;
+  }
+
+  .message-content [style*="display:flex"][style*="gap:8px"] .btn,
+  .message-content [style*="display:flex"][style*="gap:8px"] button {
+    width: 100% !important;
+  }
+
+  /* doc-previewのKPIグリッド */
+  .doc-preview .kpi-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -1534,7 +1995,7 @@ body::before {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 150;
+  z-index: 199;
 }
 
 .sidebar-overlay.active {
@@ -1696,7 +2157,7 @@ body.light-theme .doc-preview {
 }
 .btn-ghost:hover { border-color: var(--primary); color: var(--primary-light); }
 
-/* モバイル最適化 */
+/* モバイル最適化（追加ルール） */
 @media (max-width: 768px) {
   #indicatorGrid {
     grid-template-columns: 1fr 1fr !important;
@@ -1707,6 +2168,15 @@ body.light-theme .doc-preview {
   .nav-step-body .nav-item {
     padding: 10px 12px;
     font-size: 13px;
+  }
+  /* select要素のモバイル最適化 */
+  select {
+    font-size: 16px !important; /* iOSズーム防止 */
+    padding: 10px 12px !important;
+  }
+  /* テキストエリアのモバイル最適化 */
+  .glass-card textarea {
+    font-size: 16px !important;
   }
 }
 

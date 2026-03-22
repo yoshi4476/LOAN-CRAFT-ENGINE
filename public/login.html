@@ -112,6 +112,50 @@
       color: #27AE60; margin-bottom: 16px; display: none;
     }
     .footer { text-align: center; margin-top: 20px; font-size: 11px; color: rgba(228,230,240,0.25); }
+
+    /* モバイルレスポンシブ */
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 12px;
+      }
+      .login-card {
+        padding: 32px 20px;
+        border-radius: 16px;
+      }
+      .logo-icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        font-size: 20px;
+      }
+      .logo h1 { font-size: 18px; }
+      .logo p { font-size: 11px; }
+      .logo { margin-bottom: 24px; }
+      .tabs { margin-bottom: 20px; }
+      .tab { padding: 8px; font-size: 12px; }
+      .form-group label { font-size: 11px; }
+      input {
+        padding: 10px 12px;
+        font-size: 16px; /* iOSズーム防止 */
+        border-radius: 8px;
+      }
+      .btn-primary {
+        padding: 12px;
+        font-size: 13px;
+        border-radius: 8px;
+      }
+      .error-msg, .success-msg {
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      .footer { font-size: 10px; margin-top: 16px; }
+    }
+
+    @media (max-width: 360px) {
+      .login-card {
+        padding: 24px 16px;
+      }
+      .logo h1 { font-size: 16px; }
+      .tab { padding: 7px; font-size: 11px; }
+    }
   </style>
 </head>
 <body>

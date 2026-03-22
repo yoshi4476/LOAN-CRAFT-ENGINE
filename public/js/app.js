@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - メインアプリケーション
  * 初期化・コマンドシステム・チャットUI管理
  * ============================================================ */
@@ -519,13 +519,22 @@ const App = {
 
   // モバイルサイドバー
   toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('sidebarOverlay').classList.toggle('active');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const headerActions = document.querySelector('.header-actions');
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    // サイドバー展開時はヘッダーボタンを隠す（z-index/stacking context問題の回避）
+    if (headerActions) {
+      headerActions.style.visibility = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
   },
 
   closeSidebar() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.remove('active');
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) headerActions.style.visibility = '';
   },
 
   // テーマ切替

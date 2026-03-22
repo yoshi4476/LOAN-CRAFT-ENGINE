@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LOAN CRAFT ENGINE v5.0 — 融資獲得総合プラットフォーム</title>
   <meta name="description" content="銀行審査逆算型・融資獲得総合プラットフォーム。中小企業の融資獲得を包括的に支援するAIシステム。格付けシミュレーション、資料作成、戦略レポート生成。">
-  <link rel="stylesheet" href="css/style.css?v=20260322">
+  <link rel="stylesheet" href="css/style.css?v=20260323">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
 </head>
 <body>
@@ -236,13 +236,13 @@
       </div>
       <div class="header-actions">
         <button class="header-btn" onclick="App.toggleTheme()" title="テーマ切替">
-          🌓 テーマ
+          <span class="header-btn-icon">🌓</span><span class="header-btn-text">テーマ</span>
         </button>
-        <button class="header-btn" onclick="App.toggleCommandPalette()" title="コマンドパレット (Ctrl+K)">
-          ⌨️ <span style="font-size:11px;">Ctrl+K</span>
+        <button class="header-btn header-btn-cmdpalette" onclick="App.toggleCommandPalette()" title="コマンドパレット (Ctrl+K)">
+          <span class="header-btn-icon">⌨️</span><span class="header-btn-text">Ctrl+K</span>
         </button>
         <button class="header-btn" onclick="App.executeCommand('/ステータス')" title="進捗状況">
-          📊 ステータス
+          <span class="header-btn-icon">📊</span><span class="header-btn-text">ステータス</span>
         </button>
       </div>
     </header>
@@ -309,7 +309,7 @@
 <script src="js/bank-database.js?v=20260322"></script>
 <script src="js/scenario-compare.js?v=20260322"></script>
 <script src="js/doc-learning.js?v=20260322"></script>
-<script src="js/app.js?v=20260322"></script>
+<script src="js/app.js?v=20260323"></script>
 <script>
   // サーバー接続時はデータ同期
   try {
