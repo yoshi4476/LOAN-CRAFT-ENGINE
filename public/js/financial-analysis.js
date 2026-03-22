@@ -209,4 +209,79 @@ const FinancialAnalysis = {
     Database.saveCompanyData(dna);
     App.addSystemMessage(Utils.createAlert('success', '✅', '決算データを企業DNAに反映しました。格付け診断・資料生成の精度が向上します。'));
   },
+
+
+  
+  // AI呼出共通ヘルパー
+  async _callAI(systemPrompt, userPrompt) {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const apiKey = settings.openaiApiKey;
+    const model = settings.openaiModel || 'gpt-4o-mini';
+    
+    // サーバー経由を優先
+    try {
+      const data = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+      });
+      if (data && data.choices) return data.choices[0].message.content;
+    } catch(e) {}
+    
+    // フォールバック: ローカル直接呼出
+    if (!apiKey) return null;
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices[0].message.content;
+  },
+
+  // AI決算書分析レポート
+  async aiAnalyzeFinancials() {
+    const data = Database.loadCompanyData() || {};
+    const results = [];
+    for (let p = 1; p <= 3; p++) {
+      const fs = data['financial_period' + p];
+      if (fs) results.push({ period: p, ...fs });
+    }
+    if (results.length === 0) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', '先に決算データを入力してください（/決算分析）。')); return; }
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AI決算書分析レポートを生成中...'));
+
+    const systemPrompt = 'あなたは中小企業の財務分析専門家です。銀行審査の視点から決算書を分析し、改善提案を行ってください。日本語で回答してください。';
+    const userPrompt = `以下の決算データを分析し、銀行審査の視点からレポートを作成してください。
+
+【決算データ】
+${results.map(r => `第${r.period}期: 売上${r.revenue || 0}万 営業利益${r.operatingProfit || 0}万 経常利益${r.ordinaryProfit || 0}万 純資産${r.netAssets || 0}万 総資産${r.totalAssets || 0}万 借入${r.totalDebt || 0}万`).join('\n')}
+
+以下の形式で回答してください：
+## 📊 決算書AI分析レポート
+
+### 収益性分析
+売上・利益の推移と銀行評価
+
+### 安全性分析
+自己資本比率・債務の評価
+
+### 成長性分析
+トレンドの評価
+
+### ⚠️ 銀行が懸念するポイント
+具体的な懸念事項
+
+### 📈 改善提案（3項目）
+具体的な数値目標を含めた改善策`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">📊 AI決算書分析レポート</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AI分析エラー: ' + e.message)); }
+  },
 };

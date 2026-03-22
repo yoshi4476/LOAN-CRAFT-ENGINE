@@ -131,7 +131,33 @@
 
       <div class="nav-divider"></div>
 
-      <!-- ツール（折りたたみ） -->
+      <!-- AI分析ツール（折りたたみ） -->
+      <div class="nav-step" data-step="ai">
+        <div class="nav-step-header" onclick="App.toggleStep('ai')">
+          <span class="icon" style="font-size:14px;">🤖</span>
+          <span class="step-label">AI分析ツール</span>
+          <span class="step-arrow">▸</span>
+        </div>
+        <div class="nav-step-body">
+          <div class="nav-item" data-cmd="/AI格付け">
+            <span class="icon">🔍</span> AI格付け分析
+          </div>
+          <div class="nav-item" data-cmd="/AI面談">
+            <span class="icon">🏦</span> AI面談シミュレーション
+          </div>
+          <div class="nav-item" data-cmd="/AI決算">
+            <span class="icon">📊</span> AI決算書分析
+          </div>
+          <div class="nav-item" data-cmd="/AI交渉">
+            <span class="icon">💰</span> AI金利交渉戦略
+          </div>
+          <div class="nav-item" data-cmd="/AI整合">
+            <span class="icon">✅</span> AI整合性チェック
+          </div>
+        </div>
+      </div>
+
+            <!-- ツール（折りたたみ） -->
       <div class="nav-step" data-step="tools">
         <div class="nav-step-header tools-header" onclick="App.toggleStep('tools')">
           <span class="icon" style="font-size:14px;">🛠️</span>

@@ -461,5 +461,76 @@ const Interview = {
     Database.saveCompanyData(data);
     App.addSystemMessage(Utils.createAlert('success', '✅', '詳細財務データを保存しました。格付け診断を開始します。'));
     setTimeout(() => App.executeCommand('/診断'), 500);
-  }
+  },
+
+
+  
+  // AI呼出共通ヘルパー
+  async _callAI(systemPrompt, userPrompt) {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const apiKey = settings.openaiApiKey;
+    const model = settings.openaiModel || 'gpt-4o-mini';
+    
+    // サーバー経由を優先
+    try {
+      const data = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+      });
+      if (data && data.choices) return data.choices[0].message.content;
+    } catch(e) {}
+    
+    // フォールバック: ローカル直接呼出
+    if (!apiKey) return null;
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices[0].message.content;
+  },
+
+  // AI面談シミュレーション
+  async aiSimulateMeeting() {
+    const data = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AI銀行面談シミュレーションを生成中...'));
+
+    const systemPrompt = 'あなたは日本の銀行融資担当者です。融資申込企業に対して面談を行います。厳しめの質問も含めてリアルな面談をシミュレーションしてください。日本語で回答してください。';
+    const userPrompt = `以下の企業情報をもとに、銀行融資面談のシミュレーションを作成してください。
+
+【企業情報】
+会社名: ${data.companyName || '未登録'}
+業種: ${data.industry || '不明'}
+年商: ${data.annualRevenue || '不明'}万円
+従業員数: ${data.employees || '不明'}名
+設立年数: ${data.yearsInBusiness || '不明'}年
+希望借入額: ${data.loanAmount || '不明'}万円
+資金使途: ${data.loanPurpose || '不明'}
+格付け: ${rr ? rr.rank : '未診断'}
+
+以下の形式で回答してください：
+## 🏦 面談シミュレーション
+
+### 想定質問と模範回答（8問）
+各質問に対して：
+- 🏦 **銀行担当者の質問**
+- ✅ **模範回答**（具体的な数字を含めて）
+- ⚠️ **NGワード/避けるべき回答**
+
+### 💡 面談成功のポイント
+3つのアドバイス`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">🏦 AI面談シミュレーション</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AI面談エラー: ' + e.message)); }
+  },
 };

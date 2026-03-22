@@ -302,5 +302,82 @@ const Strategy = {
     </div>`;
 
     App.addSystemMessage(html);
-  }
+  },
+
+
+  
+  // AI呼出共通ヘルパー
+  async _callAI(systemPrompt, userPrompt) {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const apiKey = settings.openaiApiKey;
+    const model = settings.openaiModel || 'gpt-4o-mini';
+    
+    // サーバー経由を優先
+    try {
+      const data = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+      });
+      if (data && data.choices) return data.choices[0].message.content;
+    } catch(e) {}
+    
+    // フォールバック: ローカル直接呼出
+    if (!apiKey) return null;
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices[0].message.content;
+  },
+
+  // AI金利交渉戦略
+  async aiNegotiationStrategy() {
+    const data = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AI金利交渉戦略を生成中...'));
+
+    const systemPrompt = 'あなたは融資コンサルタントです。中小企業の金利交渉をサポートするための具体的な戦略を提案してください。日本語で回答してください。';
+    const userPrompt = `以下の企業情報をもとに、銀行との金利交渉戦略を提案してください。
+
+【企業情報】
+業種: ${data.industry || '不明'}
+年商: ${data.annualRevenue || '不明'}万円
+借入希望額: ${data.loanAmount || '不明'}万円
+格付け: ${rr ? rr.rank : '未診断'}
+メインバンク: ${data.mainBank || '不明'}
+既存借入: ${data.existingLoans || '不明'}
+
+以下の形式で回答してください：
+## 💰 AI金利交渉戦略レポート
+
+### 現状分析
+現在の市場金利と企業の交渉力の評価
+
+### 交渉シナリオ（3パターン）
+1. **強気シナリオ**: 目標金利と論拠
+2. **標準シナリオ**: 現実的な着地点
+3. **最低ライン**: 譲歩の限界
+
+### 交渉テクニック（5つ）
+具体的な交渉の進め方
+
+### 🎯 使えるフレーズ集
+実際に使える交渉トーク3つ
+
+### ⚠️ やってはいけないこと
+避けるべき言動3つ`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">💰 AI金利交渉戦略レポート</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AI分析エラー: ' + e.message)); }
+  },
 };

@@ -460,5 +460,88 @@ const Extra = {
       </div>
     </div>`;
     App.addSystemMessage(html);
-  }
+  },
+
+
+  
+  // AI呼出共通ヘルパー
+  async _callAI(systemPrompt, userPrompt) {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const apiKey = settings.openaiApiKey;
+    const model = settings.openaiModel || 'gpt-4o-mini';
+    
+    // サーバー経由を優先
+    try {
+      const data = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+      });
+      if (data && data.choices) return data.choices[0].message.content;
+    } catch(e) {}
+    
+    // フォールバック: ローカル直接呼出
+    if (!apiKey) return null;
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices[0].message.content;
+  },
+
+  // AI整合性チェック
+  async aiConsistencyCheck() {
+    const data = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+    const docs = Database.load('lce_saved_docs') || [];
+
+    if (docs.length === 0 && !rr) {
+      App.addSystemMessage(Utils.createAlert('warning', '⚠️', '先にDNA登録と資料生成を行ってください。'));
+      return;
+    }
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AIが資料間の整合性をチェック中...'));
+
+    const docSummaries = docs.slice(0, 5).map(d => `【${d.type || '不明'}】${(d.content || '').substring(0, 300)}`).join('\n---\n');
+
+    const systemPrompt = 'あなたは銀行審査書類の専門家です。提出資料間の整合性をチェックし、矛盾や不整合があれば指摘してください。日本語で回答してください。';
+    const userPrompt = `以下の企業情報と作成済み資料の整合性をチェックしてください。
+
+【企業DNA情報】
+会社名: ${data.companyName || '未登録'}
+業種: ${data.industry || '不明'}
+年商: ${data.annualRevenue || '不明'}万円
+従業員数: ${data.employees || '不明'}名
+借入希望額: ${data.loanAmount || '不明'}万円
+格付け: ${rr ? rr.rank : '未診断'}
+
+【作成済み資料（一部抜粋）】
+${docSummaries || 'なし'}
+
+以下の形式で回答してください：
+## ✅ AI整合性チェック結果
+
+### チェック結果サマリー
+全体の整合性評価（A/B/C）
+
+### ⚠️ 不整合・矛盾の指摘
+具体的な矛盾箇所と修正案
+
+### 📝 追加が必要な情報
+記載が不足している項目
+
+### 💡 提出前の改善ポイント
+3つの最終確認事項`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">✅ AI整合性チェック結果</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AIチェックエラー: ' + e.message)); }
+  },
 };

@@ -419,5 +419,81 @@ const Rating = {
     </div></div>`;
 
     App.addSystemMessage(html);
-  }
+  },
+
+
+  
+  // AI呼出共通ヘルパー
+  async _callAI(systemPrompt, userPrompt) {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const apiKey = settings.openaiApiKey;
+    const model = settings.openaiModel || 'gpt-4o-mini';
+    
+    // サーバー経由を優先
+    try {
+      const data = await ApiClient.request('/api/ai/generate', {
+        method: 'POST',
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+      });
+      if (data && data.choices) return data.choices[0].message.content;
+    } catch(e) {}
+    
+    // フォールバック: ローカル直接呼出
+    if (!apiKey) return null;
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], max_tokens: 4000, temperature: 0.4 })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices[0].message.content;
+  },
+
+  // AI格付け分析コメント生成
+  async aiAnalyzeRating() {
+    const rr = Database.loadRatingResult();
+    const data = Database.loadCompanyData() || {};
+    if (!rr) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', '先に格付け診断を実行してください。')); return; }
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AIが格付け分析中...'));
+
+    const systemPrompt = 'あなたは銀行審査のプロフェッショナルです。企業の格付け結果を分析し、格付け改善のための具体的なアドバイスを日本語で提供してください。';
+    const userPrompt = `以下の企業の格付け結果を分析し、改善アドバイスを3〜5項目で具体的に提案してください。
+
+【企業情報】
+業種: ${data.industry || '不明'}
+年商: ${data.annualRevenue || '不明'}万円
+従業員数: ${data.employees || '不明'}名
+設立年数: ${data.yearsInBusiness || '不明'}年
+
+【格付け結果】
+総合ランク: ${rr.rank || '不明'}
+定量スコア: ${rr.quantitative || 0}点
+定性スコア: ${rr.qualitative || 0}点
+合計スコア: ${rr.score || 0}点
+
+【ボトルネック】
+${(rr.bottlenecks || []).join('\n')}
+
+以下の形式で回答してください：
+## 🔍 格付け総評
+総合的な評価コメント
+
+## 📈 改善アドバイス
+1. **改善項目名**: 具体的なアクション
+2. ...
+
+## 🎯 短期的に改善可能な項目
+即効性のある改善策`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。最高管理者コンソールから設定してください。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">🤖 AI格付け分析レポート</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AI分析エラー: ' + e.message)); }
+  },
 };
