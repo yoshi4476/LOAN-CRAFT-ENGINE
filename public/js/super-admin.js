@@ -690,6 +690,20 @@ const SuperAdmin = {
       ['累計推定コスト', `$${(localUsage.cost || 0).toFixed(4)}（約${Math.ceil((localUsage.cost || 0) * 150)}円）`],
     ]);
 
+    html += `<div class="report-subtitle" style="margin-top:20px;">💰 API使用料の目安</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        ※ 1ドル=150円換算。実際の料金はOpenAIの最新価格をご確認ください。
+      </div>`;
+    html += Utils.createTable(['モデル', '入力単価', '出力単価', '資料1件あたり', '月100件利用時'], [
+      ['gpt-4o-mini（推奨）', '$0.15/100万', '$0.60/100万', '約0.3円', '約30円/月'],
+      ['gpt-4o　（高品質）', '$2.50/100万', '$10.00/100万', '約5円', '約500円/月'],
+      ['gpt-4-turbo', '$10.00/100万', '$30.00/100万', '約20円', '約2,000円/月'],
+    ]);
+    html += `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.6;">
+      💡 <strong>gpt-4o-mini</strong> は品質と価格のバランスが最良です。月100件生成でも約30円程度。<br>
+      📌 1資料あたり約2,000入力 + 4,000出力トークンで計算。案件自動作成（7資料一括）は約2円です。
+    </div>`;
+
     html += `<div class="report-subtitle" style="margin-top:20px;">🛡️ ローカルデータ</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
         <div class="glass-card" style="padding:14px;text-align:center;">

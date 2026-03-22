@@ -1710,3 +1710,32 @@ body.light-theme .doc-preview {
   }
 }
 
+
+
+/* ドロップダウン(select)のダークテーマ対応 */
+select, select option {
+  background: var(--bg-input, #1a2035) !important;
+  color: var(--text-primary, #e0e0e0) !important;
+  border: 1px solid var(--border-secondary, rgba(255,255,255,0.15)) !important;
+  border-radius: 6px;
+}
+select:focus {
+  border-color: var(--accent-primary, #4f8ef7) !important;
+  outline: none;
+}
+/* input要素のダークテーマ強化 */
+.glass-card input[type="text"],
+.glass-card input[type="email"],
+.glass-card input[type="password"],
+.glass-card input[type="number"],
+.glass-card textarea {
+  background: var(--bg-input, #1a2035) !important;
+  color: var(--text-primary, #e0e0e0) !important;
+  border: 1px solid var(--border-secondary, rgba(255,255,255,0.15)) !important;
+  border-radius: 6px;
+}
+.glass-card input:focus,
+.glass-card textarea:focus {
+  border-color: var(--accent-primary, #4f8ef7) !important;
+  outline: none;
+}
