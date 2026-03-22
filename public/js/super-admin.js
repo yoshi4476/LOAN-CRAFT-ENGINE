@@ -48,7 +48,7 @@ const SuperAdmin = {
         case 'saas': html += this.renderSaaS(); break;
       }
     } catch(e) {
-      html += Utils.createAlert('error', '❌', `データ取得エラー: ${e.message}`);
+      html += Utils.createAlert('info', 'ℹ️', 'サーバー未接続のためローカルモードで動作中です。データはブラウザに保存されます。');
     }
 
     html += `</div></div>`;

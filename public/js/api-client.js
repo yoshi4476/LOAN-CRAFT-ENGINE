@@ -26,7 +26,7 @@ const ApiClient = {
     window.location.href = '/login';
   },
 
-  // 共通fetchメソッド
+  // 共通fetchメソッド（サーバー未稼働時はnullを返す）
   async request(endpoint, options = {}) {
     const token = this.getToken();
     const headers = { 'Content-Type': 'application/json', ...options.headers };
@@ -34,13 +34,19 @@ const ApiClient = {
 
     try {
       const res = await fetch(`${this.BASE}${endpoint}`, { ...options, headers });
+      // サーバー未稼働でHTMLが返る場合を検出
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.warn(`[API] ${endpoint}: サーバー未接続（HTML応答）`);
+        return null;
+      }
       if (res.status === 401) { console.warn('[API] 認証エラー'); return null; }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'APIエラー');
       return data;
     } catch (e) {
-      console.error(`[API] ${endpoint}:`, e.message);
-      throw e;
+      console.warn(`[API] ${endpoint}: ${e.message}`);
+      return null;
     }
   },
 
