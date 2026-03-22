@@ -61,6 +61,9 @@
           <div class="nav-item" data-cmd="/診断">
             <span class="icon">🔍</span> 格付け診断
           </div>
+          <div class="nav-item" data-cmd="/AI格付け" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI分析
+          </div>
           <div class="nav-item" data-cmd="/マトリックス">
             <span class="icon">📊</span> 審査マトリックス
           </div>
@@ -88,6 +91,9 @@
           <div class="nav-item" data-cmd="/整合チェック">
             <span class="icon">✅</span> 整合チェック
           </div>
+          <div class="nav-item" data-cmd="/AI整合" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI整合チェック
+          </div>
         </div>
       </div>
 
@@ -103,17 +109,32 @@
           <div class="nav-item" data-cmd="/戦略">
             <span class="icon">📋</span> 総合戦略レポート
           </div>
+          <div class="nav-item" data-cmd="/AI戦略" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI戦略レポート
+          </div>
           <div class="nav-item" data-cmd="/面談準備">
             <span class="icon">🤝</span> 面談準備
+          </div>
+          <div class="nav-item" data-cmd="/AI面談" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI面談シミュレーション
           </div>
           <div class="nav-item" data-cmd="/金利交渉">
             <span class="icon">💰</span> 金利交渉
           </div>
+          <div class="nav-item" data-cmd="/AI交渉" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI交渉戦略
+          </div>
           <div class="nav-item" data-cmd="/保証解除">
             <span class="icon">🔓</span> 経営者保証解除
           </div>
+          <div class="nav-item" data-cmd="/AI保証" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI保証解除戦略
+          </div>
           <div class="nav-item" data-cmd="/チェック">
             <span class="icon">📝</span> 提出前チェック
+          </div>
+          <div class="nav-item" data-cmd="/AI提出" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI提出前チェック
           </div>
           <div class="nav-item" data-cmd="/スケジュール">
             <span class="icon">📅</span> 面談スケジュール
@@ -131,32 +152,6 @@
 
       <div class="nav-divider"></div>
 
-      <!-- AI分析ツール（折りたたみ） -->
-      <div class="nav-step" data-step="ai">
-        <div class="nav-step-header" onclick="App.toggleStep('ai')">
-          <span class="icon" style="font-size:14px;">🤖</span>
-          <span class="step-label">AI分析ツール</span>
-          <span class="step-arrow">▸</span>
-        </div>
-        <div class="nav-step-body">
-          <div class="nav-item" data-cmd="/AI格付け">
-            <span class="icon">🔍</span> AI格付け分析
-          </div>
-          <div class="nav-item" data-cmd="/AI面談">
-            <span class="icon">🏦</span> AI面談シミュレーション
-          </div>
-          <div class="nav-item" data-cmd="/AI決算">
-            <span class="icon">📊</span> AI決算書分析
-          </div>
-          <div class="nav-item" data-cmd="/AI交渉">
-            <span class="icon">💰</span> AI金利交渉戦略
-          </div>
-          <div class="nav-item" data-cmd="/AI整合">
-            <span class="icon">✅</span> AI整合性チェック
-          </div>
-        </div>
-      </div>
-
             <!-- ツール（折りたたみ） -->
       <div class="nav-step" data-step="tools">
         <div class="nav-step-header tools-header" onclick="App.toggleStep('tools')">
@@ -167,6 +162,9 @@
         <div class="nav-step-body">
           <div class="nav-item" data-cmd="/決算分析">
             <span class="icon">📊</span> 決算書分析
+          </div>
+          <div class="nav-item" data-cmd="/AI決算" style="padding-left:36px;font-size:12px;">
+            <span class="icon">🤖</span> AI分析レポート
           </div>
           <div class="nav-item" data-cmd="/金融機関">
             <span class="icon">🏦</span> 金融機関DB

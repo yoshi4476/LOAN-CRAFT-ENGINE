@@ -544,4 +544,48 @@ ${docSummaries || 'なし'}
       </div>`);
     } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AIチェックエラー: ' + e.message)); }
   },
+
+
+  // AI提出前チェック
+  async aiPreSubmitCheck() {
+    const data = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+    const docs = Database.load('lce_saved_docs') || [];
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AIが提出書類を最終チェック中...'));
+    const systemPrompt = 'あなたは銀行融資審査の専門家です。提出前の書類を最終チェックし、合格率を上げるための改善点を指摘してください。日本語で回答してください。';
+    const userPrompt = `以下の情報から融資申込の最終チェックを行ってください。
+
+【企業】${data.companyName || '未登録'} / ${data.industry || '不明'} / 年商${data.annualRevenue || '不明'}万円
+【格付け】${rr ? rr.rank + ' (' + rr.score + '点)' : '未診断'}
+【作成済み資料数】${docs.length}件
+【希望借入】${data.loanAmount || '不明'}万円 / 使途: ${data.loanPurpose || '不明'}
+
+以下の形式で：
+## 📋 AI提出前最終チェック
+
+### 総合判定: [◎/○/△/✕]
+一言での評価
+
+### ✅ 準備OK項目
+問題ない項目のリスト
+
+### ⚠️ 要改善項目
+修正すべき点（優先度順）
+
+### 📝 不足書類の指摘
+追加で必要な書類
+
+### 💡 合格率を上げるヒント
+3つの最終アドバイス`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">📋 AI提出前最終チェック</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', e.message)); }
+  },
 };

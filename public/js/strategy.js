@@ -380,4 +380,86 @@ const Strategy = {
       </div>`);
     } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', 'AI分析エラー: ' + e.message)); }
   },
+
+
+  // AI戦略レポート生成
+  async aiStrategyReport() {
+    const data = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+    if (!rr) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', '先に格付け診断を実行してください。')); return; }
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AI総合戦略レポートを生成中...'));
+    const systemPrompt = 'あなたは融資獲得の戦略コンサルタントです。企業情報と格付け結果から、融資成功のための総合戦略レポートを作成してください。日本語で回答してください。';
+    const userPrompt = `以下のデータから融資獲得の総合戦略レポートを作成してください。
+
+【企業】${data.companyName || '未登録'} / ${data.industry || '不明'} / 年商${data.annualRevenue || '不明'}万円
+【格付け】${rr.rank || '不明'} (${rr.score || 0}点) ボトルネック: ${(rr.bottlenecks || []).join(', ')}
+【希望】${data.loanAmount || '不明'}万円 / ${data.loanPurpose || '不明'}
+
+以下の形式で：
+## 🎯 融資獲得戦略サマリー
+成功確率の評価と推奨アプローチ
+
+## 📋 アクションプラン（時系列）
+1週目〜4週目の具体的行動
+
+## 🏦 推奨申込先と優先順位
+銀行名と理由（3行以上）
+
+## ⚠️ リスクと対策
+想定されるリスクと回避策
+
+## 💡 差別化ポイント
+他社との差別化になる強調ポイント`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">🎯 AI総合戦略レポート</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', e.message)); }
+  },
+
+  // AI経営者保証解除アドバイス
+  async aiGuaranteeAdvice() {
+    const data = Database.loadCompanyData() || {};
+    const rr = Database.loadRatingResult();
+
+    App.addSystemMessage(Utils.createAlert('info', '🤖', 'AI経営者保証解除の戦略を生成中...'));
+    const systemPrompt = 'あなたは経営者保証ガイドラインの専門家です。経営者保証の解除・軽減のための具体的な戦略を提案してください。日本語で回答してください。';
+    const userPrompt = `以下の企業情報から経営者保証解除の戦略を提案してください。
+
+【企業】${data.companyName || '未登録'} / ${data.industry || '不明'} / 年商${data.annualRevenue || '不明'}万円 / 従業員${data.employees || '不明'}名
+【格付け】${rr ? rr.rank : '未診断'}
+【既存借入】${data.existingLoans || '不明'}
+
+以下の形式で：
+## 🔓 経営者保証解除 AI戦略
+
+### 適用可能な制度
+経営者保証ガイドライン・事業承継時の特例 等
+
+### 解除の要件と現状評価
+法人と個人の分離、財務基盤の強化度合い
+
+### 具体的アクションプラン（5ステップ）
+時系列での行動計画
+
+### 銀行への交渉ポイント
+説得力のある3つの論拠
+
+### ⚠️ 注意事項
+リスクと留意点`;
+
+    try {
+      const content = await this._callAI(systemPrompt, userPrompt);
+      if (!content) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'APIキーが未設定です。')); return; }
+      App.addSystemMessage(`<div class="glass-card highlight">
+        <div class="report-title">🔓 AI経営者保証解除戦略</div>
+        <div style="font-size:13px;line-height:1.8;color:var(--text-primary);white-space:pre-wrap;">${Utils.escapeHtml(content)}</div>
+      </div>`);
+    } catch(e) { App.addSystemMessage(Utils.createAlert('error', '❌', e.message)); }
+  },
 };
