@@ -96,9 +96,31 @@ const DocLearning = {
           </div>
           <div id="learnUploadedFiles" style="margin-top:8px;"></div>
         </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;">📝 テキストで学習（ノウハウ・メモなど直接入力）</label>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">融資のコツ、審査のポイント、交渉テクニックなど、テキストで直接学習データを入力できます。</div>
+          <textarea id="learnTextInput" rows="4" placeholder="例: 信用保証協会付き融資の場合、保証料は融資額の0.5〜2.0%が目安。保証料を前払いする場合は融資額に上乗せ可能。" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:8px;color:var(--text-primary);font-size:13px;resize:vertical;"></textarea>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;">🏷️ カテゴリ（任意）</label>
+          <select id="learnCategory" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+            <option value="">-- カテゴリを選択 --</option>
+            <option value="審査基準">審査基準</option>
+            <option value="交渉テクニック">交渉テクニック</option>
+            <option value="書類作成">書類作成</option>
+            <option value="制度融資">制度融資</option>
+            <option value="保証協会">保証協会</option>
+            <option value="金利・条件">金利・条件</option>
+            <option value="面談対策">面談対策</option>
+            <option value="経営改善">経営改善</option>
+            <option value="財務指標">財務指標</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="DocLearning.registerCase()">💾 結果を登録</button>
+        <button class="btn btn-secondary" onclick="DocLearning.registerTextKnowledge()">📝 テキスト知識を登録</button>
         ${cases.length > 0 ? '<button class="btn btn-secondary" onclick="DocLearning.showAnalysis()">📊 学習分析</button>' : ''}
       </div>`;
 
@@ -119,6 +141,25 @@ const DocLearning = {
       });
     }
 
+    // 知識ベース表示
+    const knowledge = data.knowledge || [];
+    if (knowledge.length > 0) {
+      html += `<h3 style="margin-top:20px;">📚 知識ベース (${knowledge.length}件)</h3>
+        <div style="max-height:300px;overflow-y:auto;">`;
+      const categories = [...new Set(knowledge.map(k => k.category))];
+      categories.forEach(cat => {
+        const items = knowledge.filter(k => k.category === cat);
+        html += `<div style="margin:8px 0;">
+          <div style="font-size:12px;font-weight:700;color:var(--accent-cyan);margin-bottom:4px;">🏷️ ${cat} (${items.length}件)</div>`;
+        items.slice(-5).forEach(k => {
+          html += `<div style="font-size:12px;padding:6px 10px;margin:3px 0;background:var(--bg-tertiary);border-radius:6px;line-height:1.6;border-left:3px solid var(--accent-cyan);">${k.text.substring(0, 150)}${k.text.length > 150 ? '...' : ''}</div>`;
+        });
+        if (items.length > 5) html += `<div style="font-size:11px;color:var(--text-muted);text-align:right;">他 ${items.length - 5}件</div>`;
+        html += `</div>`;
+      });
+      html += `</div>`;
+    }
+
     html += `</div>`;
     App.addSystemMessage(html);
 
@@ -136,6 +177,8 @@ const DocLearning = {
     const amount = parseFloat(document.getElementById('learnAmount')?.value) || 0;
     const failReason = document.getElementById('learnFailReason')?.value;
     const memo = document.getElementById('learnMemo')?.value;
+    const textInput = document.getElementById('learnTextInput')?.value?.trim();
+    const category = document.getElementById('learnCategory')?.value;
     const savedDocs = Database.load('lce_saved_documents') || {};
 
     // アップロードファイルの内容をテキストとして追加
@@ -147,7 +190,9 @@ const DocLearning = {
     const docContents = {
       ...savedDocs,
       uploadedFiles: this._uploadedFiles.map(f => ({ name: f.name, type: f.type, size: f.size })),
-      uploadedTexts: uploadedTexts || null
+      uploadedTexts: uploadedTexts || null,
+      manualText: textInput || null,
+      category: category || null
     };
 
     this.saveCase(result, docContents, { bank, amount, failReason, memo });
@@ -300,5 +345,49 @@ const DocLearning = {
   removeFile(index) {
     this._uploadedFiles.splice(index, 1);
     this._renderUploadedFiles();
+  },
+
+  // テキスト知識の直接登録（融資ノウハウ等）
+  saveKnowledge(text, category, source) {
+    const data = this.load();
+    if (!data.knowledge) data.knowledge = [];
+    data.knowledge.push({
+      id: Date.now() + Math.random(),
+      text,
+      category: category || 'その他',
+      source: source || 'manual',
+      createdAt: new Date().toISOString()
+    });
+    this.save(data);
+  },
+
+  // テキスト知識を登録（UI用）
+  registerTextKnowledge() {
+    const text = document.getElementById('learnTextInput')?.value?.trim();
+    const category = document.getElementById('learnCategory')?.value || 'その他';
+    if (!text) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'テキストを入力してください。')); return; }
+    this.saveKnowledge(text, category, 'manual');
+    App.addSystemMessage(Utils.createAlert('success', '✅', `知識ベースに登録しました（カテゴリ: ${category}）`));
+    this.showLearningUI(); // 再表示
+  },
+
+  // 知識ベースの検索
+  searchKnowledge(query) {
+    const data = this.load();
+    const knowledge = data.knowledge || [];
+    if (!query) return knowledge;
+    const q = query.toLowerCase();
+    return knowledge.filter(k => k.text.toLowerCase().includes(q) || k.category.toLowerCase().includes(q));
+  },
+
+  // 初期学習データの投入（初回のみ）
+  initDefaultKnowledge() {
+    const data = this.load();
+    if (data.knowledge && data.knowledge.length > 0) return;
+    const defaults = [{"text":"銀行融資の審査では「返済能力」が最重要。返済原資は①営業キャッシュフロー（経常利益＋減価償却費）②資産売却③借換の3段階で説明する。","category":"審査基準"},{"text":"自己資本比率は最低10%以上を目指す。20%以上あれば「優良」評価。債務超過は即レッドフラグだが、役員借入金を資本性劣後ローンに認定してもらえば実態自己資本が改善する。","category":"財務指標"},{"text":"信用格付けは定量評価（財務）70%＋定性評価（経営力等）30%が一般的。定量は「安全性」「収益性」「成長性」「返済能力」の4軸。","category":"審査基準"},{"text":"借入金月商倍率（借入÷月商）は6ヶ月以内が優良、12ヶ月超は要注意。業種により基準は異なるが、銀行はこの指標を必ず見る。","category":"財務指標"},{"text":"債務償還年数（有利子負債÷営業CF）は10年以内が目安。20年超は「正常先」から「要注意先」に格下げされるリスクがある。","category":"財務指標"},{"text":"経営者保証ガイドラインに基づく無保証融資の条件：①法人と経営者の資産分離②法人のみの資産・収益力で返済可能③適時適切な情報開示。","category":"審査基準"},{"text":"事業計画書の最重要ポイントは「売上の根拠」。積み上げ方式（顧客数×単価×頻度）で、見込み顧客名まで記載できると説得力が高い。","category":"書類作成"},{"text":"金利交渉のベストタイミングは①決算後（好業績時）②他行からの融資提案があった時③借換時。「御行との関係を深めたい」という姿勢が重要。","category":"交渉テクニック"},{"text":"面談の最初の30秒で決まる。冒頭で「本日は○○のためにお時間をいただきありがとうございます。△分で簡潔にご説明します」と時間を区切る。","category":"面談対策"},{"text":"銀行担当者が最も嫌うのは「嘘」と「隠し事」。悪い情報こそ先に開示し、対策と一緒に説明する。後から発覚すると信用が崩壊する。","category":"面談対策"},{"text":"信用保証協会の保証限度額は一般保証2.8億円＋セーフティネット保証2.8億円＝最大5.6億円。ただし無担保保証は8,000万円まで。","category":"保証協会"},{"text":"マル経融資（小規模事業者経営改善資金）は無担保・無保証・低金利（約1.2%）で2,000万円まで。商工会議所の経営指導を6ヶ月以上受けることが条件。","category":"制度融資"},{"text":"日本政策金融公庫の新創業融資制度は、自己資金要件が「創業資金総額の10分の1以上」。開業前でも利用可能。","category":"制度融資"},{"text":"銀行は「メイン行」を重視。預金取引・給与振込・各種手数料を集中させることでメイン行としての関係を構築し、融資の優先度を上げる。","category":"交渉テクニック"},{"text":"試算表（月次決算書）を毎月提出している企業は銀行評価が高い。3ヶ月以上遅れると「管理体制に問題あり」と見られる。","category":"審査基準"},{"text":"融資申込時に複数行に同時申込する場合、各行に「他行にも相談中」と正直に伝える。隠すと後でCIC（信用情報）で発覚し信頼を失う。","category":"交渉テクニック"},{"text":"資金繰り表は最低12ヶ月分を作成。「いつ」「いくら」資金が必要かを月次で示す。季節変動がある業種は特に重要。","category":"書類作成"},{"text":"エグゼクティブサマリーは1ページ以内。「何を」「いくら」「なぜ」「どう返す」の4点を簡潔に。忙しい審査役がこれだけ読んでYes/Noを判断する。","category":"書類作成"},{"text":"担保評価は時価の50〜70%（掛け目）が一般的。不動産の場合、路線価ベース×70%程度。担保があると金利0.5〜1.0%下がることが多い。","category":"金利・条件"},{"text":"リスケ（返済条件変更）した場合、最低1年間は正常返済の実績を積むこと。正常返済に復帰した実績が、次の融資審査で最大の説得材料になる。","category":"経営改善"},{"text":"赤字決算でも融資は可能。ポイントは①一過性の赤字か②営業CFがプラスか③来期の黒字化計画があるか。「営業利益は黒字」が最低ライン。","category":"審査基準"},{"text":"融資の5原則：①安全性（返せるか）②収益性（銀行が儲かるか）③公共性（社会に役立つか）④成長性（将来性）⑤流動性（すぐ回収できるか）。","category":"審査基準"},{"text":"プロパー融資（保証なし）を引き出すコツ：保証協会付きで実績を積む→3〜5年の正常返済実績→プロパーへの切替を提案。段階的なアプローチが有効。","category":"交渉テクニック"},{"text":"決算書の「別表」まで見られることを前提に。特に別表4（所得計算）と別表16（減価償却）。節税のやりすぎは融資に不利になる場合がある。","category":"審査基準"},{"text":"中小企業のCRD格付け（クレジット・リスク・データベース）を意識する。年商・業種・財務指標でデフォルト確率が算出され、保証料率に反映される。","category":"審査基準"},{"text":"銀行のノルマは3月・9月（半期末）に集中。この時期は融資が通りやすい傾向がある。逆に決算直後の4月・10月はハードルが上がりやすい。","category":"交渉テクニック"},{"text":"経営力向上計画の認定を受けると、信用保証料0.1%引下げ・固定資産税の特例・金融支援が受けられる。認定は中小企業庁に申請。","category":"制度融資"},{"text":"面談で聞かれる定番3問：①なぜこの金額が必要か②どう返済するか③最悪のシナリオでどうなるか。この3つに即答できれば合格率は大幅に上がる。","category":"面談対策"},{"text":"売上高営業利益率：製造業5%以上、小売業2%以上、卸売業1%以上、建設業5%以上、IT業10%以上が銀行の「正常先」の目安。","category":"財務指標"},{"text":"資金使途は「運転資金」より「設備投資」の方が通りやすい。設備が担保になり得るし、投資→売上増→返済の流れが描きやすい。見積書・カタログ必須。","category":"審査基準"}];
+    defaults.forEach(d => {
+      this.saveKnowledge(d.text, d.category, 'system_default');
+    });
+    console.log('学習エンジン: 初期ノウハウ' + defaults.length + '件を登録');
   }
 };

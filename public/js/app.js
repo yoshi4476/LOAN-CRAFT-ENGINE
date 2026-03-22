@@ -67,6 +67,7 @@ const App = {
     if (typeof AssessmentModes !== 'undefined') AssessmentModes.initFromSettings();
     this.initTheme();
     this.showBootMessage();
+    if (typeof DocLearning !== "undefined") DocLearning.initDefaultKnowledge();
     this.updateSidebarProgress();
   },
 
