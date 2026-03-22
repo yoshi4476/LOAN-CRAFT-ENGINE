@@ -26,9 +26,14 @@ app.get('/api/health', (req, res) => {
 
 // 非同期起動（sql.jsのDB初期化後にルートを登録）
 async function startServer() {
-  // DB初期化
+  // DB初期化（接続失敗時もサーバーは起動）
   const { getDb, dbGet, dbRun, pool } = require('./db');
-  await getDb();
+  try {
+    await getDb();
+    console.log('  ✅ DB接続成功');
+  } catch(dbErr) {
+    console.warn('  ⚠️ DB接続失敗（サーバーは起動を継続）:', dbErr.message);
+  }
 
   // デフォルトユーザー自動作成（ログイン不要モード用）
   try {
