@@ -206,15 +206,39 @@ const Interview = {
           `</div>`;
         break;
       case 'textarea':
-        inputHtml = `<div style="margin-top:8px;color:var(--text-muted);font-size:12px;">💡 チャット入力欄にご入力ください</div>`;
+        inputHtml = `<div style="margin-top:8px;">
+          <textarea id="interviewInput" rows="3" placeholder="${q.placeholder || 'ここに入力してください'}" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:8px;color:var(--text-primary);font-size:13px;resize:vertical;"></textarea>
+          <button class="btn btn-primary btn-sm" style="margin-top:6px;" onclick="Interview.handleInlineInput('${q.id}','textarea')">💬 送信</button>
+        </div>`;
         break;
       default:
-        inputHtml = `<div style="margin-top:8px;color:var(--text-muted);font-size:12px;">💡 ${q.unit ? q.unit + 'の数値を' : ''}チャット入力欄にご入力ください${q.placeholder ? '（' + q.placeholder + '）' : ''}</div>`;
+        inputHtml = `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+          <input id="interviewInput" type="${q.type === 'number' ? 'number' : 'text'}" placeholder="${q.placeholder || ''}" style="flex:1;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:8px;color:var(--text-primary);font-size:13px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();Interview.handleInlineInput('${q.id}','${q.type}');}">
+          ${q.unit ? `<span style="color:var(--text-muted);font-size:12px;">${q.unit}</span>` : ''}
+          <button class="btn btn-primary btn-sm" onclick="Interview.handleInlineInput('${q.id}','${q.type}')">💬</button>
+        </div>`;
     }
 
     const html = `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${q.label}</div>${inputHtml}`;
     App.addSystemMessage(html);
-    App.currentInputHandler = (text) => this.handleTextInput(q, text);
+    // フォーカスを入力欄に自動セット
+    setTimeout(() => { const el = document.getElementById('interviewInput'); if (el) el.focus(); }, 100);
+  },
+
+  // インライン入力欄からの回答ハンドラ
+  handleInlineInput(questionId, type) {
+    const el = document.getElementById('interviewInput');
+    if (!el) return;
+    const text = el.value.trim();
+    if (!text) return;
+    // 対応する質問を検索
+    let question = null;
+    this.steps.forEach(step => {
+      step.questions.forEach(q => { if (q.id === questionId) question = q; });
+    });
+    if (!question) return;
+    this.handleTextInput(question, text);
   },
 
   // テキスト入力ハンドラ
