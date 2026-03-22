@@ -90,24 +90,23 @@ const App = {
 
   // イベントリスナー設定
   setupEventListeners() {
-    // チャット入力
+    // チャット入力（要素が存在する場合のみ）
     const input = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.handleUserInput();
-      }
-    });
-
-    sendBtn.addEventListener('click', () => this.handleUserInput());
-
-    // テキストエリア自動リサイズ
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-    });
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.handleUserInput();
+        }
+      });
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      });
+    }
+    if (sendBtn) sendBtn.addEventListener('click', () => this.handleUserInput());
 
     // コマンドパレット
     document.addEventListener('keydown', (e) => {
@@ -143,11 +142,13 @@ const App = {
     const sidebarOverlay = document.getElementById('sidebarOverlay');
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => this.closeSidebar());
 
-    // ナビゲーション（ページ切替方式: 前のコンテンツをクリアして新規表示）
-    document.querySelectorAll('.nav-item[data-cmd]').forEach(item => {
-      item.addEventListener('click', () => {
+    // ナビゲーション（イベント委譲方式: 動的要素にも対応）
+    const sidebarNav = document.getElementById('sidebarNav');
+    if (sidebarNav) {
+      sidebarNav.addEventListener('click', (e) => {
+        const item = e.target.closest('.nav-item[data-cmd]');
+        if (!item) return;
         const cmd = item.dataset.cmd;
-        // チャットエリアをクリアして切替表示
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) chatMessages.innerHTML = '';
         this.executeCommand(cmd);
@@ -155,7 +156,7 @@ const App = {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         item.classList.add('active');
       });
-    });
+    }
   },
 
   // ユーザー入力処理
