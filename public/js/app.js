@@ -74,6 +74,7 @@ const App = {
     { cmd: '/シナリオ', label: '/シナリオ', desc: '🔄 シナリオシミュレーション', fn: () => BankAudit.showScenarioSim() },
     { cmd: '/Excel読込', label: '/Excel読込', desc: '📁 Excel決算書読込', fn: () => BankAudit.showExcelImport() },
     { cmd: '/テンプレート', label: '/テンプレート', desc: '📥 決算書テンプレートDL', fn: () => BankAudit.downloadTemplate() },
+    { cmd: '/融資ガイド', label: '/融資ガイド', desc: '📚 銀行融資審査ガイド', fn: () => BankAudit.showLoanGuide() },
   ],
 
   // アプリ初期化
