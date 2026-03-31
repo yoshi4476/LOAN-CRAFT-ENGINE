@@ -66,6 +66,117 @@ const Guide = {
     App.addSystemMessage(html);
   },
 
+  // おすすめの使い方（カテゴリ別）
+  showUsageAdvice() {
+    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+      <div class="report-title">🧭 おすすめの使い方（融資獲得の王道ルート）</div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:20px;">
+        LOAN CRAFT ENGINE を使って融資確率を最大化するための、カテゴリ別の標準ワークフロー（使い方）です。
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="glass-card" style="padding:16px;border-left:4px solid var(--accent-primary);">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">Step 1 企業情報登録：現状の立ち位置を知る</div>
+          <div style="font-size:12px;line-height:1.7;">
+            <strong>【推奨アクション】</strong> <span class="badge" onclick="App.executeCommand('/Excel読込')" style="cursor:pointer;background:var(--accent-primary);color:#fff;">/Excel読込（またはPDF）</span> → <span class="badge" onclick="App.executeCommand('/DNA')" style="cursor:pointer;background:var(--accent-primary);color:#fff;">/DNA補完入力</span><br>
+            まずは決算書（Excel・PDF）をドラッグ＆ドロップしてAIに財務データを読み込ませてください。<br>
+            その後、<code>/DNA</code> 画面で「業種」や「代表者の経歴」「借入状況」など、入力できる部分だけ登録します。<br>
+            <strong>💡 アドバイス:</strong> ここまで完了するだけで、画面右の「DNAスコア」や「格付け」が自動計算され、現在の融資通過可能性がざっくり把握できます。
+          </div>
+        </div>
+
+        <div style="font-size:24px;color:var(--accent-primary);text-align:center;">↓</div>
+
+        <div class="glass-card" style="padding:16px;border-left:4px solid var(--accent-green);">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">Step 2 分析・診断：銀行の目線で弱点を補強する</div>
+          <div style="font-size:12px;line-height:1.7;">
+            <strong>【推奨アクション】</strong> <span class="badge" onclick="App.executeCommand('/業種モード')" style="cursor:pointer;background:var(--accent-green);color:#fff;">/業種モード</span> → <span class="badge" onclick="App.executeCommand('/格付判定')" style="cursor:pointer;background:var(--accent-green);color:#fff;">/格付判定 (シミュレーター活用)</span><br>
+            あなたの会社の属する「業種」を選択し、銀行の審査基準を適正化させます。その後、<code>/格付判定</code> を開きます。<br>
+            もし判定が「要注意先」だった場合、画面右上の<strong>「✨目標逆算」</strong>ボタンを押してください。システムが「あといくら利益を出せば（または借入を減らせば）融資に通るか」を自動計算します。<br>
+            <strong>💡 アドバイス:</strong> この「目標逆算」で出た数値を、Step3の事業計画の目標値として設定するのがプロのやり方です。
+          </div>
+        </div>
+
+        <div style="font-size:24px;color:var(--accent-green);text-align:center;">↓</div>
+
+        <div class="glass-card" style="padding:16px;border-left:4px solid var(--accent-gold);">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">Step 3 資料作成：銀行を説得する計画書を作る</div>
+          <div style="font-size:12px;line-height:1.7;">
+            <strong>【推奨アクション】</strong> <span class="badge" onclick="App.executeCommand('/事業計画')" style="cursor:pointer;background:var(--accent-gold);color:#000;">/事業計画</span> → <span class="badge" onclick="App.executeCommand('/資料')" style="cursor:pointer;background:var(--accent-gold);color:#000;">/資料（AI資料生成）</span><br>
+            Step2で弾き出した「目標利益」を達成するための10年計画を <code>/事業計画</code> で作ります。数字ができたら、<code>/資料</code> メニューから「AI資料生成」を選び、OpenAIに高品質な定性資料（エグゼクティブサマリーや強み解説など）を書かせます。<br>
+            <strong>💡 アドバイス:</strong> 必ず提出前に <code>/整合チェック</code> を行い、PLの利益とCFの数字に矛盾がないか確認してください。
+          </div>
+        </div>
+
+        <div style="font-size:24px;color:var(--accent-gold);text-align:center;">↓</div>
+
+        <div class="glass-card" style="padding:16px;border-left:4px solid var(--accent-cyan);">
+          <div style="font-size:14px;font-weight:700;margin-bottom:8px;">Step 4 戦略・面談準備：自信を持って交渉に臨む</div>
+          <div style="font-size:12px;line-height:1.7;">
+            <strong>【推奨アクション】</strong> <span class="badge" onclick="App.executeCommand('/面談準備')" style="cursor:pointer;background:var(--accent-cyan);color:#fff;">/面談準備 (または /AI面談)</span> → <span class="badge" onclick="App.executeCommand('/戦略')" style="cursor:pointer;background:var(--accent-cyan);color:#fff;">/戦略</span><br>
+            資料が揃ったら、銀行役席との面談に備えます。<code>/面談準備</code>（またはAI面談）で、銀行員が「突っ込んでくるポイント（事業の弱みや資金繰りの懸念）」を事前に把握し、回答を準備します。<br>
+            <strong>💡 アドバイス:</strong> 「代表者が事業計画の数字の根拠を、自分の言葉でスラスラ答えられるか」が公庫や銀行面談で最も重視されます。
+          </div>
+        </div>
+      </div>
+    </div>`;
+    App.addSystemMessage(html);
+  },
+
+  // 初心者向け財務ガイド
+  showBeginnerGuide() {
+    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+      <div class="report-title">👶 初心者向け財務ガイド（超入門）</div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:20px;">
+        「決算書が読めない」「銀行が何を言っているか分からない」という方向けに、LOAN CRAFT ENGINEを使う上で最低限知っておきたい用語と見方を優しく解説します。
+      </p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+        <!-- PL編 -->
+        <div class="glass-card" style="padding:16px;">
+          <div style="font-size:16px;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">📈 損益計算書（PL）のキホン</div>
+          <div style="font-size:12px;line-height:1.6;">
+            <strong>PLとは？</strong>：1年間でいくら売上て、いくら利益が残ったかの「成績表」です。<br><br>
+            <strong>① 営業利益（えいぎょうりえき）</strong><br>
+            本業で稼いだ利益。売上から原価と経費（人件費や家賃）を引いたもの。<strong>銀行はここを一番見ます。ここが赤字だと「本業がダメ」とみなされ融資が厳しくなります。</strong><br><br>
+            <strong>② 経常利益（けいじょうりえき）</strong><br>
+            営業利益から「支払利息」などを引いたもの。会社全体の日常的な実力を示します。<br><br>
+            <strong>③ 当期純利益（とうきじゅんりえき）</strong><br>
+            税金を払ったあとの、最終的な手残り。
+          </div>
+        </div>
+
+        <!-- BS編 -->
+        <div class="glass-card" style="padding:16px;">
+          <div style="font-size:16px;font-weight:700;color:var(--accent-green);margin-bottom:12px;">⚖️ 貸借対照表（BS）のキホン</div>
+          <div style="font-size:12px;line-height:1.6;">
+            <strong>BSとは？</strong>：会社の「財産（資産）」と「借金（負債）」のバランスシートです。<br><br>
+            <strong>① 純資産（自己資本）</strong><br>
+            資産から負債を引いて残る「本当の自分の財産」。これがマイナスになっている状態を<strong>「債務超過（さいむちょうか）」</strong>と呼び、銀行が最も嫌う状態です（融資は原則NG）。<br><br>
+            <strong>② 有利子負債（ゆうりしふさい）</strong><br>
+            銀行借入など、利息をつけて返さなければいけない借金のこと。<br><br>
+            <strong>③ 現預金（手元流動性）</strong><br>
+            銀行は「現預金が月の売上の何ヶ月分あるか（手元流動性）」を見て、倒産リスクを測ります。最低1〜2ヶ月分は必要です。
+          </div>
+        </div>
+
+        <!-- 審査指標編 -->
+        <div class="glass-card" style="padding:16px;">
+          <div style="font-size:16px;font-weight:700;color:var(--accent-gold);margin-bottom:12px;">🏦 銀行の審査でよく出る言葉</div>
+          <div style="font-size:12px;line-height:1.6;">
+            <strong>① 債務償還年数（さいむしょうかんねんすう）★最重要</strong><br>
+            「今の借金を、今の利益ペースで返すと何年かかるか」という年数。<strong>原則10年以内</strong>であれば正常先と見なされ安全圏です。15年を超えると黄色信号です。<br><br>
+            <strong>② 運転資金（うんてんしきん）</strong><br>
+            仕入れ代金を先に払って、売上が後から入ってくるまでの「立替期間」を埋めるために必要なお金。事業が成長するほど多額の運転資金が必要になります。<br><br>
+            <strong>③ リスケジュール（リスケ）</strong><br>
+            毎月の借入返済を減額・猶予してもらうこと。リスケ中は原則として「新規の融資」は受けられなくなります。
+          </div>
+        </div>
+      </div>
+    </div>`;
+    App.addSystemMessage(html);
+  },
+
   // ガイドコンテンツ
   content: {
     overview: {
