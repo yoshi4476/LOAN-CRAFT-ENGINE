@@ -69,7 +69,15 @@ router.post('/parse-pdf', authenticate, upload.single('file'), async (req, res) 
 
     // 1. PDFからテキスト抽出
     const pdfData = await pdfParse(req.file.buffer);
-    const textData = pdfData.text.slice(0, 30000); // トークン節約のため先頭3万文字に制限
+    let textData = pdfData.text.slice(0, 30000); // トークン節約のため先頭3万文字に制限
+
+    // セキュリティマスキング処理（法人名・代表者名・電話番号・メールアドレスの秘匿化）
+    textData = textData
+      .replace(/(株式会社|有限会社|合同会社|一般社団法人|医療法人|ＮＰＯ法人)[\s　]*[^\s　,。、\n]+/g, '[MASKED COMPANY]')
+      .replace(/[^\s　,。、\n]+[\s　]*(株式会社|有限会社|合同会社)/g, '[MASKED COMPANY]')
+      .replace(/(代表取締役|取締役|代表社員)[　\s]*[^\s　,。、\n]+/g, '$1 [MASKED NAME]')
+      .replace(/0\d{1,4}[-(]?\d{1,4}[-)]?\d{3,4}/g, '[MASKED PHONE]')
+      .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[MASKED EMAIL]');
 
     // 2. OpenAI APIでJSON構造化
     const systemPrompt = `あなたはプロの財務コンサルタントです。提供される決算書のテキストデータ（OCR・PDF抽出）から以下の勘定科目の数値を抽出し、JSON形式で返答してください。

@@ -898,5 +898,171 @@ const BankAudit = {
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
     App.addSystemMessage(Utils.createAlert('success', '📥', 'レポートを新しいタブで出力しました。印刷やPDF保存が可能です。'));
+  },
+
+  // ========== 6ヶ月短期資金繰り表シミュレーション ==========
+  showCashFlowTable() {
+    const dna = Database.loadCompanyData() || {};
+    const rev = dna.annualRevenue || 120000;
+    const op = dna.operatingProfit !== undefined ? dna.operatingProfit : 6000;
+    const debt = dna.totalDebt || 0;
+    const cash = dna.cashDeposits || 20000;
+    
+    // 月次ベースの基礎数値推定
+    const mRev = Math.round(rev / 12);
+    // 営業利益＝売上－（原価＋販管費）。つまり月次の支出(原価+販管費)＝(売上-営利)/12
+    const mExp = Math.round((rev - op) / 12);
+    // 借入返済＝有利子負債 / 120ヶ月(10年)
+    const mRepay = Math.round(debt / 120);
+
+    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+      <div class="report-title" style="color:var(--accent-primary);">📅 短期資金繰り予測（向こう6ヶ月）</div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+        現在の決算データを利用し、向こう半年間の現預金ショートが発生しないかを簡易予測します。<br>
+        銀行側は「なぜ運転資金が必要か」「半年先の資金ショート懸念はないか」を審査で非常に重視します。
+      </p>
+
+      <div style="background:rgba(255,255,255,0.02);padding:16px;border-radius:8px;border:1px solid var(--border-primary);margin-bottom:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);">月商（売上入金）</label>
+            <input type="number" id="cf_m_rev" class="form-control" value="${mRev}" onchange="BankAudit._calcCF()">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);">月次経費（仕入・販管費支払）</label>
+            <input type="number" id="cf_m_exp" class="form-control" value="${mExp}" onchange="BankAudit._calcCF()">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);">現在の現預金（スタート）</label>
+            <input type="number" id="cf_starting_cash" class="form-control" value="${cash}" onchange="BankAudit._calcCF()">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);">月次借入返済</label>
+            <input type="number" id="cf_m_repay" class="form-control" value="${mRepay}" onchange="BankAudit._calcCF()">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);">売上予測トレンド</label>
+            <select id="cf_trend" class="form-control" onchange="BankAudit._calcCF()">
+              <option value="1.0">横ばい（維持）</option>
+              <option value="1.05">毎月+5%成長</option>
+              <option value="0.95">毎月-5%縮小（減少）</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <button class="btn btn-secondary" style="width:100%" onclick="BankAudit.downloadCFExcel()">📥 Excelに出力</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="fs-table" style="width:100%;font-size:12px;text-align:right;">
+          <thead>
+            <tr style="background:var(--bg-secondary);">
+              <th style="text-align:left;padding:8px;">項目</th>
+              <th style="padding:8px;">1ヶ月目</th><th style="padding:8px;">2ヶ月目</th><th style="padding:8px;">3ヶ月目</th>
+              <th style="padding:8px;">4ヶ月目</th><th style="padding:8px;">5ヶ月目</th><th style="padding:8px;">6ヶ月目</th>
+            </tr>
+          </thead>
+          <tbody id="cf_table_body">
+            <!-- JSで動的生成 -->
+          </tbody>
+        </table>
+      </div>
+      <div id="cf_advice" style="margin-top:16px;"></div>
+    </div>`;
+
+    App.addSystemMessage(html);
+    setTimeout(() => this._calcCF(), 100);
+  },
+
+  _calcCF() {
+    const elStart = document.getElementById('cf_starting_cash');
+    if(!elStart) return;
+    const startCash = Number(elStart.value)||0;
+    const revBase = Number(document.getElementById('cf_m_rev').value)||0;
+    const expBase = Number(document.getElementById('cf_m_exp').value)||0;
+    const repay = Number(document.getElementById('cf_m_repay').value)||0;
+    const trend = Number(document.getElementById('cf_trend').value)||1.0;
+
+    let html = '';
+    let currCash = startCash;
+    let minCash = startCash;
+
+    const rowRev = [];
+    const rowExp = [];
+    const rowRepay = [];
+    const rowBal = [];
+    const rowCash = [];
+
+    let currentRev = revBase;
+    
+    // 6ヶ月シミュレーション
+    for(let i=0; i<6; i++) {
+        const r = Math.round(currentRev);
+        // 変動費もそのままスライドさせると複雑なので、経費はベース維持とするが、売上連動で少し調整（簡易化）
+        const e = Math.round(expBase * (currentRev/revBase || 1));
+        const bal = r - e - repay;
+        currCash += bal;
+        if(currCash < minCash) minCash = currCash;
+
+        rowRev.push(r);
+        rowExp.push(e);
+        rowRepay.push(repay);
+        rowBal.push(bal);
+        rowCash.push(currCash);
+        
+        currentRev *= trend;
+    }
+
+    // 内部データ保存(Excel出力用)
+    this._latestCFData = { rowRev, rowExp, rowRepay, rowBal, rowCash };
+
+    // 描画
+    html += `<tr><td style="text-align:left;padding:6px;">(+) 売上入金</td>${rowRev.map(v=>`<td style="padding:6px;">${v.toLocaleString()}</td>`).join('')}</tr>`;
+    html += `<tr><td style="text-align:left;padding:6px;color:var(--accent-gold);">(-) 経費・仕入支払</td>${rowExp.map(v=>`<td style="padding:6px;color:var(--accent-gold);">${v.toLocaleString()}</td>`).join('')}</tr>`;
+    html += `<tr><td style="text-align:left;padding:6px;color:var(--accent-red);">(-) 借入返済</td>${rowRepay.map(v=>`<td style="padding:6px;color:var(--accent-red);">${v.toLocaleString()}</td>`).join('')}</tr>`;
+    html += `<tr style="border-top:1px dashed var(--border-secondary);"><td style="text-align:left;padding:6px;">単月収支</td>${rowBal.map(v=>`<td style="padding:6px;font-weight:700;color:${v<0?'var(--accent-red)':'var(--accent-green)'}">${v.toLocaleString()}</td>`).join('')}</tr>`;
+    html += `<tr style="border-top:2px solid var(--border-primary);background:rgba(108,99,255,0.05);"><td style="text-align:left;padding:8px;font-weight:700;">月末結び現預金</td>${rowCash.map(v=>`<td style="padding:8px;font-weight:700;color:${v<0?'var(--accent-red)':'var(--text-primary)'}">${v.toLocaleString()}</td>`).join('')}</tr>`;
+    
+    document.getElementById('cf_table_body').innerHTML = html;
+
+    // アドバイス生成
+    const advEl = document.getElementById('cf_advice');
+    if (minCash < 0) {
+        advEl.innerHTML = `<div style="padding:12px;background:rgba(244,67,54,0.1);border-left:4px solid var(--accent-red);border-radius:4px;font-size:12px;">
+            ⚠️ <strong>資金ショートの危険性があります</strong><br>
+            向こう6ヶ月以内に現預金がマイナス（${minCash.toLocaleString()} 千円）になる予測です。<br>
+            銀行には、ショートする月より前に「${Math.abs(minCash).toLocaleString()} 千円」以上の運転資金の融資実行をオファーする必要があります。
+        </div>`;
+    } else if (minCash < revBase) {
+        advEl.innerHTML = `<div style="padding:12px;background:rgba(255,193,7,0.1);border-left:4px solid var(--accent-gold);border-radius:4px;font-size:12px;">
+            💡 <strong>手元流動性が薄くなっています</strong><br>
+            ショートはしませんが、現預金残高が「月商1ヶ月分（${revBase.toLocaleString()} 千円）」を割り込む月があります。<br>
+            突発的な支払い（賞与や税金等）に備え、余裕をもった運転資金の確保（プロパーや保証協会枠によるつなぎ資金）を銀行に相談することをおすすめします。
+        </div>`;
+    } else {
+        advEl.innerHTML = `<div style="padding:12px;background:rgba(76,175,80,0.1);border-left:4px solid var(--accent-green);border-radius:4px;font-size:12px;">
+            ✅ <strong>当面の資金繰りは安定しています</strong><br>
+            向こう6ヶ月は現預金ショートの懸念はありません。この時期は運転資金よりも「設備投資」や「前向きな事業拡大資金」など戦略的な調達を銀行に相談しやすいタイミングです。
+        </div>`;
+    }
+  },
+
+  downloadCFExcel() {
+    if(typeof XLSX === 'undefined') return App.addSystemMessage(Utils.createAlert('error','❌','SheetJSが読み込めません。'));
+    if(!this._latestCFData) return;
+    const d = this._latestCFData;
+    const ws_data = [
+      ['項目', '1ヶ月目', '2ヶ月目', '3ヶ月目', '4ヶ月目', '5ヶ月目', '6ヶ月目'],
+      ['(+) 売上入金', ...d.rowRev],
+      ['(-) 経費・仕入支払', ...d.rowExp],
+      ['(-) 借入返済', ...d.rowRepay],
+      ['単月収支', ...d.rowBal],
+      ['月末結び現預金', ...d.rowCash]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "6ヶ月資金繰り予測");
+    XLSX.writeFile(wb, "cashflow_forecast.xlsx");
   }
 };
