@@ -330,14 +330,27 @@ EBITDA: ${ebitda.toLocaleString()}
   // ===== ⑤ シナリオシミュレーション =====
   showScenarioSim() {
     const dna = Database.loadCompanyData() || {};
-    const rev = dna.annualRevenue || 0;
-    const op = dna.operatingProfit || 0;
-    const ord = dna.ordinaryProfit || 0;
-    html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+    const d = this.currentFS || {};
+    const rev = d.revenue || dna.annualRevenue || 0;
+    const ord = d.ordProfit || dna.ordinaryProfit || 0;
+    const dep = d.deprecTotal || dna.depreciation || 0;
+    const ibd = (d.shortDebt||0) + (d.longDebt||0) + (d.bonds||0) || dna.totalDebt || 0;
+
+    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
       <div class="report-title">🔄 シナリオシミュレーション</div>
       <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
-        楽観・基本・悲観の3シナリオで格付変動をシミュレーションします。
+        楽観・基本・悲観の3シナリオで格付変動をシミュレーションします。基準となる財務数値を直接いじることも可能です。
       </p>
+
+      <div class="report-subtitle">1️⃣ 基準財務数値（手入力で直接変更可能）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;background:rgba(108,99,255,0.04);padding:12px;border-radius:8px;">
+        ${this._inp('sc_base_rev', '基準 売上高', rev)}
+        ${this._inp('sc_base_ord', '基準 経常利益', ord)}
+        ${this._inp('sc_base_dep', '減価償却費', dep)}
+        ${this._inp('sc_base_ibd', '有利子負債', ibd)}
+      </div>
+
+      <div class="report-subtitle">2️⃣ シナリオ変動率設定</div>
       <div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">
         <tr style="border-bottom:2px solid var(--border-secondary);">
           <th style="padding:8px;text-align:left;">項目</th>
@@ -364,12 +377,10 @@ EBITDA: ${ebitda.toLocaleString()}
   },
 
   runScenario() {
-    const dna = Database.loadCompanyData() || {};
-    const d = this.currentFS || {};
-    const baseRev = d.revenue || dna.annualRevenue || 0;
-    const baseOrd = d.ordProfit || dna.ordinaryProfit || 0;
-    const dep = d.deprecTotal || dna.depreciation || 0;
-    const ibd = (d.shortDebt||0) + (d.longDebt||0) + (d.bonds||0) || dna.totalDebt || 0;
+    const baseRev = this._g('sc_base_rev');
+    const baseOrd = this._g('sc_base_ord');
+    const dep = this._g('sc_base_dep');
+    const ibd = this._g('sc_base_ibd');
 
     const scenarios = [
       { label: '🟢 楽観', revPct: this._g('sc_rev_up'), ordPct: this._g('sc_ord_up'), bg: 'rgba(76,175,80,0.08)' },

@@ -270,21 +270,48 @@ const BankAudit = {
   },
 
   // ===== MODULE 3: 格付判定 =====
-  showCaseJudgment() {
-    const d = this.currentFS || this._collectFS();
-    const dna = Database.loadCompanyData() || {};
-    const fs = d.revenue > 0 ? d : {
-      revenue: dna.annualRevenue||0, opProfit: dna.operatingProfit||0,
-      ordProfit: dna.ordinaryProfit||0, netProfit: dna.netIncome||0,
-      totalAssets: dna.totalAssets||0, netAssets: dna.netAssets||0,
-      deprecTotal: dna.depreciation||0, interestExp: dna.interestExpense||0,
-      shortDebt: dna.totalDebt*0.4||0, longDebt: dna.totalDebt*0.6||0,
-      notesRec: 0, accountsRec: dna.receivables||0, inventory: dna.inventory||0,
-      notesPay: 0, accountsPay: dna.payables||0,
-      currentAssets: dna.currentAssets||0, fixedAssets: dna.fixedAssets||0,
-      deferredAssets: 0, currentLiab: dna.currentLiabilities||0,
-      bonds: 0
-    };
+  showCaseJudgment(isUpdate = false) {
+    let fs;
+    if (isUpdate) {
+      fs = {
+        revenue: this._g('rj_revenue'),
+        opProfit: this._g('rj_opProfit'),
+        ordProfit: this._g('rj_ordProfit'),
+        netProfit: this._g('rj_netProfit'),
+        totalAssets: this._g('rj_totalAssets'),
+        netAssets: this._g('rj_netAssets'),
+        deprecTotal: this._g('rj_deprecTotal'),
+        shortDebt: this._g('rj_ibd') * 0.4,
+        longDebt: this._g('rj_ibd') * 0.6,
+        cash: this._g('rj_cash'),
+        bonds: 0,
+        notesRec: 0, accountsRec: this.currentFS?.accountsRec || 0,
+        inventory: this.currentFS?.inventory || 0,
+        notesPay: 0, accountsPay: this.currentFS?.accountsPay || 0,
+        currentAssets: this.currentFS?.currentAssets || 0,
+        fixedAssets: this.currentFS?.fixedAssets || 0,
+        currentLiab: this.currentFS?.currentLiab || 0,
+        interestExp: this._g('rj_interestExp') || 0
+      };
+      this.currentFS = { ...(this.currentFS || {}), ...fs };
+    } else {
+      const d = this.currentFS || this._collectFS();
+      const dna = Database.loadCompanyData() || {};
+      fs = d.revenue > 0 ? d : {
+        revenue: dna.annualRevenue||0, opProfit: dna.operatingProfit||0,
+        ordProfit: dna.ordinaryProfit||0, netProfit: dna.netIncome||0,
+        totalAssets: dna.totalAssets||0, netAssets: dna.netAssets||0,
+        deprecTotal: dna.depreciation||0, interestExp: dna.interestExpense||0,
+        shortDebt: dna.totalDebt*0.4||0, longDebt: dna.totalDebt*0.6||0,
+        cash: dna.cashDeposits||0,
+        notesRec: 0, accountsRec: dna.receivables||0, inventory: dna.inventory||0,
+        notesPay: 0, accountsPay: dna.payables||0,
+        currentAssets: dna.currentAssets||0, fixedAssets: dna.fixedAssets||0,
+        deferredAssets: 0, currentLiab: dna.currentLiabilities||0,
+        bonds: 0
+      };
+      this.currentFS = fs;
+    }
     if (!fs.revenue) { App.addSystemMessage(Utils.createAlert('warning','⚠️','決算データがありません。/決算取込 か /DNA で入力してください。')); return; }
 
     const indicators = this._calcIndicators(fs);
@@ -302,6 +329,26 @@ const BankAudit = {
     let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
     <div class="report-title">🏦 財務・融資審査レポート${indLabel ? ' — ' + indLabel : ''}</div>
     ${hasP2 ? `<div style="font-size:11px;color:var(--accent-cyan);margin-bottom:8px;">📊 2期比較: 売上高 ${revChange>=0?'+':''}${revChange}% / 営業利益 ${opChange!==null?(opChange>=0?'+':'')+opChange+'%':'—'}</div>` : '<div style="font-size:11px;color:var(--accent-gold);margin-bottom:8px;">⚠️ 銀行はPLを2期分見ます。前期データも入力すると精度が向上します。</div>'}
+
+    <div class="glass-card" style="padding:16px;margin-bottom:16px;background:rgba(108,99,255,0.04);">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;">✏️ 財務数値シミュレーション（手入力で即時判定）</div>
+      <div style="font-size:10px;color:var(--text-secondary);margin-bottom:12px;">以下の数値を直接変更して「判定を更新」ボタンを押すと、格付や指標の変化を即座にシミュレーションできます。</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+        ${this._inp('rj_revenue', '売上高', fs.revenue)}
+        ${this._inp('rj_opProfit', '営業利益', fs.opProfit)}
+        ${this._inp('rj_ordProfit', '経常利益', fs.ordProfit)}
+        ${this._inp('rj_netProfit', '当期純利益', fs.netProfit)}
+        ${this._inp('rj_deprecTotal', '減価償却費', fs.deprecTotal)}
+        ${this._inp('rj_ibd', '有利子負債', (fs.shortDebt||0)+(fs.longDebt||0)+(fs.bonds||0))}
+        ${this._inp('rj_cash', '現預金', fs.cash)}
+        ${this._inp('rj_totalAssets', '総資産', fs.totalAssets)}
+        ${this._inp('rj_netAssets', '純資産', fs.netAssets)}
+        ${this._inp('rj_interestExp', '支払利息', fs.interestExp)}
+      </div>
+      <div style="margin-top:12px;text-align:right;">
+        <button class="btn btn-primary btn-sm" onclick="BankAudit.showCaseJudgment(true)">🔄 判定を更新</button>
+      </div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin:16px 0;">
       <div class="glass-card" style="padding:14px;text-align:center;">
         <div style="font-size:10px;color:var(--text-muted);">債務者区分</div>
