@@ -318,7 +318,8 @@ const BankAudit = {
     const simpleCF = this._calcSimpleCF(fs);
     const ebitda = (fs.opProfit||0) + (fs.deprecTotal||0);
     const category = this._determineCategory(indicators, simpleCF);
-    const indLabel = {manufacturing:'製造業',wholesale:'卸売業',service:'サービス業',construction:'建設業',retail:'小売業',other:''}[this.industry]||'';
+    const indLbls = {manufacturing:'製造業',wholesale:'卸売業',service:'サービス業',construction:'建設業',retail:'飲食・小売業',realestate:'不動産賃貸・管理業',it:'IT・SaaS業',medical:'医療・クリニック',agriculture:'農業・一次産業',startup:'スタートアップ',other:''};
+    const indLabel = indLbls[this.industry] || '標準（指定なし）';
 
     // 2期比較データ
     const fs2 = this.currentFS2 || {};
@@ -414,6 +415,13 @@ const BankAudit = {
     });
     html += `</div>`;
 
+    // ✅ 銀行面談向け 業種別アドバイス表示
+    const advice = this._getIndustryAdvice(this.industry);
+    html += `<div class="glass-card" style="padding:16px;margin-bottom:16px;border-left:4px solid var(--accent-gold);background:var(--bg-secondary);">
+      <div style="font-size:12px;font-weight:700;color:var(--accent-gold);margin-bottom:8px;">💡 【${indLabel}】銀行面談・融資獲得のポイント</div>
+      <div style="font-size:12px;color:var(--text-primary);line-height:1.6;">${advice}</div>
+    </div>`;
+
     // アクション
     html += `<div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="BankAudit.showOptimizationSimulator()" style="background:var(--accent-primary);">✨ 融資最適化シミュレーター</button>
@@ -426,6 +434,20 @@ const BankAudit = {
     // サーバー保存
     this._saveRating(fs, indicators, simpleCF, category);
     App.addSystemMessage(html);
+  },
+
+  _getIndustryAdvice(id) {
+    const advices = {
+      manufacturing: "設備投資が重いため、原価率と労働分配率の適正化がポイントです。また過剰在庫（デッドストック）は実態BS修正で大幅減額されるリスクがあります。",
+      realestate: "不動産業はCF(借入金返済能力)とLTV(借入金/物件価値)が命です。家賃下落リスクや空室率を織り込んだストレステスト計画を提示すると銀行の稟議が通りやすくなります。",
+      construction: "未成工事受入金と未成工事支出金のバランス（立替金か前受金か）、および外注費の支払いサイクルが資金繰りに直結します。手持ち工事の明細書(個別工事台帳)を準備してください。",
+      retail: "日銭商売のため、現預金残高（手元流動性）の厚さが死命を制します。月商の2〜3ヶ月分の現預金確保を目指してください。クレジットカード決済の入金ズレにも要注意です。",
+      it: "無形資産(システム開発費等)は銀行から資産価値ゼロと見なされがちです。継続課金(ARR)の推移や、解約率(Churn Rate)などのビジネスKPIを事業計画でアピールしましょう。",
+      medical: "診療報酬の入金は確実なため、売上債権の貸倒リスクはほぼ零と評価されます。ただし、高額な医療機器のリース・ローン負担（設備投資CF）が過剰にならないよう注意が必要です。",
+      agriculture: "天候や市況変動リスクが伴うため、過去の利益のブレ幅を説明できるようにしてください。スーパーや農協への安定的な販路（契約栽培等）があると大幅プラス評価になります。",
+      startup: "赤字先行の計画となるため、自己資金（エクイティ）の厚さと、黒字転換（PMF）までの資金繰り（ランウェイ）の証明が最重要。融資だけでなく資本性劣後ローンの活用も検討してください。"
+    };
+    return advices[id] || "利益の蓄積による自己資本の拡充と、計画的な借入金返済により、安定した財務体質を構築してください。";
   },
 
   _calcIndicators(fs) {
@@ -455,6 +477,7 @@ const BankAudit = {
       realestate:    { recM: 1.0, invM: 5.0, payM: 1.0, debtM: 20 },
       it:            { recM: 2.0, invM: 0.1, payM: 1.0, debtM: 3 },
       medical:       { recM: 2.0, invM: 0.5, payM: 1.5, debtM: 5 },
+      agriculture:   { recM: 1.5, invM: 2.0, payM: 1.5, debtM: 10 },
       startup:       { recM: 1.5, invM: 0.5, payM: 1.5, debtM: 4 },
       construction:  { recM: 3.0, invM: 2.0, payM: 2.5, debtM: 6 },
       retail:        { recM: 0.5, invM: 1.5, payM: 1.0, debtM: 3 },
@@ -465,7 +488,7 @@ const BankAudit = {
     let repayTarget = { normal: 10, caution: 20 };
     if (this.industry === 'realestate') repayTarget = { normal: 20, caution: 30 };
     if (this.industry === 'it') repayTarget = { normal: 7, caution: 15 };
-    if (this.industry === 'medical') repayTarget = { normal: 15, caution: 20 };
+    if (this.industry === 'medical' || this.industry === 'agriculture') repayTarget = { normal: 15, caution: 20 };
 
     // ★ 有利子負債償還年数 = 有利子負債 ÷ 簡易営業CF
     const repayYears = opCF > 0 ? (ibd / opCF) : -1;
@@ -584,7 +607,7 @@ const BankAudit = {
     let repayTarget = { normal: 10, caution: 20 };
     if (this.industry === 'realestate') repayTarget = { normal: 20, caution: 30 };
     if (this.industry === 'it') repayTarget = { normal: 7, caution: 15 };
-    if (this.industry === 'medical') repayTarget = { normal: 15, caution: 20 };
+    if (this.industry === 'medical' || this.industry === 'agriculture') repayTarget = { normal: 15, caution: 20 };
 
     if (ry < 0 || simpleCF.value < 0) return { label: '破綻懸念先', code: 4, color: 'var(--accent-red)' };
     
@@ -625,10 +648,12 @@ const BankAudit = {
 
     const modes = [
       { id: 'manufacturing', icon: '🏭', name: '製造・卸・一般業', desc: '標準的な審査。運転資金の回転期間や設備投資バランスを重視。', years: 10 },
-      { id: 'realestate', icon: '🏢', name: '不動産賃貸・管理業', desc: '建物の耐用年数が長いため、償還年数は20〜30年を許容。EBITDA倍率を重視。', years: 20 },
+      { id: 'retail', icon: '🏪', name: '飲食・小売業', desc: '日銭商売のため手元流動性（現預金）が命。売掛金が少ないことが前提。', years: 10 },
       { id: 'construction', icon: '🚧', name: '建設業', desc: '未成工事支出金などを運転資金とみなす。売掛回転期間の長期化も許容。', years: 10 },
       { id: 'it', icon: '💻', name: 'IT・SaaS・サービス業', desc: '有形資産が少ないため償還年数は短め（7年）に設定。利益率と手元流動性を重視。', years: 7 },
-      { id: 'medical', icon: '🏥', name: '医療・クリニック・介護', desc: '診療報酬等で収益が安定しているため、償還年数は長め（15年程度）に設定可能。', years: 15 },
+      { id: 'realestate', icon: '🏢', name: '不動産賃貸・管理業', desc: '建物の耐用年数が長いため、償還年数は20〜30年を許容。EBITDA倍率を重視。', years: 20 },
+      { id: 'medical', icon: '🏥', name: '医療・クリニック', desc: '診療報酬等で収益が安定しているため、償還年数は長め（15年程度）に設定可能。', years: 15 },
+      { id: 'agriculture', icon: '🌾', name: '農業・第一次産業', desc: '制度融資が中心となり、超長期の返済設定（15〜20年）が組まれることが多い。', years: 15 },
       { id: 'startup', icon: '🚀', name: 'スタートアップ・開業', desc: '初期の赤字や債務超過を許容し、将来キャッシュフローとランウェイを重視する特例判定。', years: 10 }
     ];
 
