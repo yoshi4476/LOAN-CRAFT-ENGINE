@@ -23,7 +23,7 @@ const ApiClient = {
   logout() {
     localStorage.removeItem('lce_token');
     localStorage.removeItem('lce_user');
-    window.location.href = '/login';
+    window.location.href = '/'; // ログイン機能無効化中はトップへリダイレクト
   },
 
   // 共通fetchメソッド（サーバー未稼働時はnullを返す）
