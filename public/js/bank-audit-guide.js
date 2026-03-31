@@ -20,6 +20,7 @@ Object.assign(BankAudit, {
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('overview')">📋 全体像</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('debtor')">🏦 債務者判断</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('cf')">💰 CF判断</button>
+        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('industry')">🏢 業種モード</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('case')">📊 案件判断</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('bank')">🏛 金融機関特性</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('pj')">🏗 PJ資金</button>
@@ -32,7 +33,7 @@ Object.assign(BankAudit, {
   showGuideTab(tab) {
     const el = document.getElementById('guide_content');
     if (!el) { this.showLoanGuide(); return; }
-    const tabs = { system: this._guideSystem, overview: this._guideOverview, debtor: this._guideDebtor, cf: this._guideCF, case: this._guideCase, bank: this._guideBank, pj: this._guidePJ };
+    const tabs = { system: this._guideSystem, overview: this._guideOverview, debtor: this._guideDebtor, cf: this._guideCF, industry: this._guideIndustry, case: this._guideCase, bank: this._guideBank, pj: this._guidePJ };
     el.innerHTML = (tabs[tab] || tabs.system).call(this);
   },
 
@@ -56,8 +57,10 @@ Object.assign(BankAudit, {
       <div style="font-size:11px;line-height:1.8;">
         <strong>【 /格付判定 】（債務者区分のシミュレーション）</strong><br>
         入力されたデータをもとに、10種類以上の銀行指標（債務償還年数、EBITDA倍率、DSCR、実質債務超過等）を瞬時に計算し、「正常先」か「要注意先」かを自動判定します。<br><br>
+        <span style="color:var(--accent-primary);font-weight:700;">🏢 業種特化モード切替（/業種モード）</span><br>
+        不動産、IT、飲食、建設など計8種類の業種モードを搭載。業種を指定することで、「償還年数」「重視される指標（手元流動性やEBITDA等）」など、銀行の審査目線が実態に合わせて適正化（緩和・厳格化）されます。<br><br>
         <span style="color:var(--accent-primary);font-weight:700;">✨ 融資最適化シミュレーター（目標逆算）</span><br>
-        格付判定画面のシミュレーターボタンを押すと、<strong>「融資に通る（正常先になる）ためには、あといくら利益が必要か（または負債を減らせばいいか）」をシステムが自動で逆算</strong>します。「ワンクリック反映」ボタンで、逆算された見込み数値を判定画面に一瞬でセット・再計算でき、経営会議ですぐに改善目標として提示できます。<br><br>
+        格付判定画面のシミュレーターボタンを押すと、<strong>「融資に通る（正常先になる）ためには、あといくら利益が必要か（または負債を減らせばいいか）」をシステムが自動で逆算</strong>します。「ワンクリック反映」ボタンで、逆算された見込み数値を判定画面に一瞬でセットできます。<br><br>
         <span style="color:var(--accent-gold);font-weight:700;">✏️ 財務数値の直接シミュレーション</span><br>
         格付判定画面上で、売上高や現預金、減価償却費などの10項目を直接書き換えて「判定を更新」ボタンを押すだけで、何度でも即座に格付の変化（What-If分析）を確認できます。
       </div>
@@ -252,10 +255,27 @@ Object.assign(BankAudit, {
     </div>`;
   },
 
-  // 4. 案件判断
+  // 4. 業種特化モード
+  _guideIndustry() {
+    return `
+    <div class="report-subtitle" style="color:var(--accent-cyan);">4. 業種特化モード（新機能）</div>
+    <div class="glass-card" style="padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">📊 各業界の商習慣に合わせた最適化判定</div>
+      <div style="font-size:12px;line-height:1.8;">
+        <strong>業種モードを選択（/業種モード）</strong>することで、銀行の審査基準が業種に応じた適正値へ自動変動します。<br><br>
+        <strong>主な変動基準:</strong><br>
+        ・🏢 <strong>不動産・医療・農業</strong>：安定収益/長期耐用のため「償還年数15〜30年」まで正常許容。<br>
+        ・💻 <strong>IT・SaaS</strong>：技術変化・無形資産メインのため「償還年数7年以内」と厳しく判定。<br>
+        ・🏪 <strong>飲食・小売業</strong>：日銭商売のため「手元流動性」を最重視し、売掛・在庫の回転期間を厳しく判定。<br>
+        ・🚀 <strong>スタートアップ</strong>：特例扱いで赤字・債務超過を許容し、「CFランウェイ」中心の審査へ移行。<br>
+      </div>
+    </div>`;
+  },
+
+  // 5. 案件判断
   _guideCase() {
     return `
-    <div class="report-subtitle" style="color:var(--accent-cyan);">4. 案件判断（運転資金・設備資金）</div>
+    <div class="report-subtitle" style="color:var(--accent-cyan);">5. 案件判断（運転資金・設備資金）</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
       <div class="glass-card" style="padding:16px;">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px;">🔄 運転資金</div>
