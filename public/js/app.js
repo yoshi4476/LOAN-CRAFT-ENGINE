@@ -72,6 +72,8 @@ const App = {
     { cmd: '/AI格付', label: '/AI格付', desc: '🤖 AI格付コメント生成', fn: () => BankAudit.aiRatingComment() },
     { cmd: '/格付履歴', label: '/格付履歴', desc: '📊 格付履歴一覧', fn: () => BankAudit.showRatingHistory() },
     { cmd: '/シナリオ', label: '/シナリオ', desc: '🔄 シナリオシミュレーション', fn: () => BankAudit.showScenarioSim() },
+    { cmd: '/Excel読込', label: '/Excel読込', desc: '📁 Excel決算書読込', fn: () => BankAudit.showExcelImport() },
+    { cmd: '/テンプレート', label: '/テンプレート', desc: '📥 決算書テンプレートDL', fn: () => BankAudit.downloadTemplate() },
   ],
 
   // アプリ初期化
