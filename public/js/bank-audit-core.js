@@ -416,7 +416,8 @@ const BankAudit = {
 
     // アクション
     html += `<div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="BankAudit.showRealBSAdjustments()">🔧 実態修正</button>
+      <button class="btn btn-primary" onclick="BankAudit.showOptimizationSimulator()" style="background:var(--accent-primary);">✨ 融資最適化シミュレーター</button>
+      <button class="btn btn-secondary" onclick="BankAudit.showRealBSAdjustments()">🔧 実態修正</button>
       <button class="btn btn-secondary" onclick="BankAudit.showPersonalAssets()">💎 個人資産緩和</button>
       <button class="btn btn-secondary" onclick="BankAudit.showPlanEditor()">📈 事業計画</button>
       <button class="btn btn-secondary" onclick="BankAudit.exportReport()">📥 レポートHTML出力</button>

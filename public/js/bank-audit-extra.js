@@ -414,5 +414,148 @@ EBITDA: ${ebitda.toLocaleString()}
 
     html += `</div></div>`;
     App.addSystemMessage(html);
+  },
+
+  // ===== ⑥ 融資最適化シミュレーター（目標逆算） =====
+  showOptimizationSimulator() {
+    const fs = this.currentFS || {};
+    if (!fs.revenue) { App.addSystemMessage(Utils.createAlert('warning','⚠️','決算データがありません。')); return; }
+
+    const ibd = (fs.shortDebt||0) + (fs.longDebt||0) + (fs.bonds||0);
+    const opCF = (fs.ordProfit||0) * (1 - this.taxRate) + (fs.deprecTotal||0);
+    const currentRepay = opCF > 0 ? ibd / opCF : -1;
+    
+    const realDebt = (fs.fixedAssets||0) + (fs.deferredAssets||0) - (fs.netAssets||0);
+    const isExcessDebt = realDebt > 0;
+
+    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+      <div class="report-title">✨ 融資最適化シミュレーター（目標逆算）</div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+        銀行融資の基本条件である「正常先（償還年数10年以内 ＆ 資産超過）」になるための必要数値を自動逆算します。
+      </p>
+
+      <div class="report-subtitle">📊 現状の課題（正常先とのギャップ）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div class="glass-card" style="padding:12px;border-left:4px solid ${currentRepay>0 && currentRepay<=10 ? 'var(--accent-green)' : 'var(--accent-red)'};">
+          <div style="font-size:11px;color:var(--text-muted);">債務償還年数（目標: 10年以内）</div>
+          <div style="font-size:16px;font-weight:700;">現状: ${currentRepay>0 ? currentRepay.toFixed(1)+'年' : 'CF赤字'}</div>
+        </div>
+        <div class="glass-card" style="padding:12px;border-left:4px solid ${!isExcessDebt ? 'var(--accent-green)' : 'var(--accent-red)'};">
+          <div style="font-size:11px;color:var(--text-muted);">実質BS（目標: 資産超過）</div>
+          <div style="font-size:16px;font-weight:700;">現状: ${isExcessDebt ? '債務超過 '+realDebt.toLocaleString() : '資産超過（クリア）'}</div>
+        </div>
+      </div>`;
+
+    if (currentRepay > 0 && currentRepay <= 10 && !isExcessDebt) {
+      html += `<div style="padding:16px;background:rgba(76,175,80,0.1);border-radius:8px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:8px;">✅</div>
+        <div style="font-weight:700;color:var(--accent-green);">すでに正常先の基準をクリアしています</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">そのまま案件判断や事業計画の作成に進んでください。</div>
+      </div></div>`;
+      App.addSystemMessage(html);
+      return;
+    }
+
+    // プランA: 収益力アップ（経常利益の増加）でカバー
+    // 目標opCF = ibd / 10
+    // 足りないopCF = (ibd / 10) - opCF
+    // 必要な経常利益増加額 = 足りないopCF / (1 - taxRate)
+    let planA_HTML = '';
+    let planA_TargetOrd = fs.ordProfit;
+    let planA_TargetNetAssets = fs.netAssets;
+
+    if (currentRepay > 10 || currentRepay < 0) {
+      const targetOpCF = ibd / 10;
+      const shortfallOpCF = targetOpCF - opCF;
+      const reqOrdProfitInc = Math.ceil(shortfallOpCF / (1 - this.taxRate));
+      planA_TargetOrd = (fs.ordProfit||0) + reqOrdProfitInc;
+      planA_HTML += `<li style="margin-bottom:6px;">償還10年を達成するための<strong style="color:var(--accent-primary);">経常利益目標: ${planA_TargetOrd.toLocaleString()}</strong>（現状比 +${reqOrdProfitInc.toLocaleString()}）</li>`;
+    } else {
+      planA_HTML += `<li style="margin-bottom:6px;"><strong style="color:var(--accent-green);">収益力（償還年数）は既にクリア</strong>しています。</li>`;
+    }
+    if (isExcessDebt) {
+      planA_TargetNetAssets = fs.netAssets + realDebt;
+      planA_HTML += `<li>債務超過を解消するための<strong style="color:var(--accent-primary);">純資産目標: ${planA_TargetNetAssets.toLocaleString()}</strong>（現状比 +${realDebt.toLocaleString()}）</li>`;
+    }
+
+    // プランB: 負債圧縮（役員借入金のDES等）でカバー
+    // 目標ibd = opCF * 10
+    // 削減すべきibd = ibd - (opCF * 10)
+    let planB_HTML = '';
+    let planB_TargetIbd = ibd;
+    let planB_TargetNetAssets = fs.netAssets;
+
+    if (currentRepay > 10 || currentRepay < 0) {
+      if (opCF <= 0) {
+        planB_HTML += `<li style="margin-bottom:6px;color:var(--accent-red);">※現在のCFが赤字のため、負債圧縮のみでは償還年数をクリアできません（黒字化必須）。</li>`;
+      } else {
+        const targetIbd = opCF * 10;
+        const reqIbdDec = ibd - targetIbd;
+        planB_TargetIbd = targetIbd;
+        planB_HTML += `<li style="margin-bottom:6px;">償還10年を達成するための<strong style="color:var(--accent-primary);">有利子負債目標: ${planB_TargetIbd.toLocaleString()}</strong>（現状比 -${reqIbdDec.toLocaleString()}）<br>
+        <span style="font-size:10px;color:var(--text-muted);">※社長個人の役員借入金との相殺（DES）や遊休資産の売却で圧縮を検討してください。</span></li>`;
+      }
+    } else {
+      planB_HTML += `<li style="margin-bottom:6px;"><strong style="color:var(--accent-green);">負債水準（償還年数）は既にクリア</strong>しています。</li>`;
+    }
+    if (isExcessDebt) {
+      planB_TargetNetAssets = fs.netAssets + realDebt;
+      planB_HTML += `<li>債務超過を解消するための<strong style="color:var(--accent-primary);">純資産目標: ${planB_TargetNetAssets.toLocaleString()}</strong>（現状比 +${realDebt.toLocaleString()}）<br>
+        <span style="font-size:10px;color:var(--text-muted);">※役員借入金の資本振替等により、純資産を増加させる必要があります。</span></li>`;
+    }
+
+    html += `<div class="report-subtitle">💡 最適化アクションプラン</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        
+        <div class="glass-card" style="padding:16px;background:rgba(108,99,255,0.04);">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--accent-primary);">プランA: 収益力アップ（V字回復）</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">負債はそのままで、利益を伸ばして返済能力をクリアする王道シナリオ。</div>
+          <ul style="font-size:12px;line-height:1.6;padding-left:16px;margin:0 0 16px 0;">
+            ${planA_HTML}
+          </ul>
+          <button class="btn btn-primary btn-sm" style="width:100%;" onclick="BankAudit.applyOptimization('A', ${planA_TargetOrd}, ${planA_TargetNetAssets}, ${ibd})">🔄 プランAの数値で判定画面へ</button>
+        </div>
+
+        <div class="glass-card" style="padding:16px;background:rgba(244,67,54,0.04);">
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--accent-red);">プランB: 負債圧縮・BSスリム化</div>
+          <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">利益はそのままで、役員借入金の振替や遊休資産売却で負債を減らすシナリオ。</div>
+          <ul style="font-size:12px;line-height:1.6;padding-left:16px;margin:0 0 16px 0;">
+            ${planB_HTML}
+          </ul>
+          <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="BankAudit.applyOptimization('B', ${fs.ordProfit}, ${planB_TargetNetAssets}, ${planB_TargetIbd})">🔄 プランBの数値で判定画面へ</button>
+        </div>
+      </div>
+    </div>`;
+
+    App.addSystemMessage(html);
+  },
+
+  applyOptimization(plan, targetOrd, targetNetAssets, targetIbd) {
+    if (!this.currentFS) return;
+    
+    // 現在の判定制御用入力欄（rj_xxx）が存在すれば更新、なければ画面を遷移してセット
+    const openJudgmentAndSet = () => {
+      this.showCaseJudgment(false); // まず画面を開く
+      setTimeout(() => {
+        if (document.getElementById('rj_ordProfit')) {
+          if (plan === 'A') {
+            document.getElementById('rj_ordProfit').value = targetOrd;
+            document.getElementById('rj_netAssets').value = targetNetAssets;
+            // 営業利益も経常利益の増加分だけ増やす（仮）
+            const diff = targetOrd - (this.currentFS.ordProfit||0);
+            document.getElementById('rj_opProfit').value = (this.currentFS.opProfit||0) + diff;
+            // 純利益も追従（仮）
+            document.getElementById('rj_netProfit').value = targetOrd;
+          } else {
+            document.getElementById('rj_ibd').value = targetIbd;
+            document.getElementById('rj_netAssets').value = targetNetAssets;
+          }
+          App.addSystemMessage(Utils.createAlert('success', '✅', `【プラン${plan}】の最適化数値を入力欄にセットしました。「判定を更新」ボタンを押してください。`));
+        }
+      }, 300);
+    };
+
+    openJudgmentAndSet();
   }
+
 });
