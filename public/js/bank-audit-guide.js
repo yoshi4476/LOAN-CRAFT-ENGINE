@@ -16,14 +16,15 @@ Object.assign(BankAudit, {
         ★セミナー資料「不動産融資セミナー」（イーストキャピタル）に基づく銀行融資審査の完全ガイドです。
       </p>
       <div style="display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="BankAudit.showGuideTab('overview')">📋 全体像</button>
+        <button class="btn btn-primary btn-sm" onclick="BankAudit.showGuideTab('system')" style="background:var(--accent-primary);">🚀 システム活用ガイド</button>
+        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('overview')">📋 全体像</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('debtor')">🏦 債務者判断</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('cf')">💰 CF判断</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('case')">📊 案件判断</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('bank')">🏛 金融機関特性</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showGuideTab('pj')">🏗 PJ資金</button>
       </div>
-      <div id="guide_content">${this._guideOverview()}</div>
+      <div id="guide_content">${this._guideSystem()}</div>
     </div>`;
     App.addSystemMessage(html);
   },
@@ -31,9 +32,70 @@ Object.assign(BankAudit, {
   showGuideTab(tab) {
     const el = document.getElementById('guide_content');
     if (!el) { this.showLoanGuide(); return; }
-    const tabs = { overview: this._guideOverview, debtor: this._guideDebtor, cf: this._guideCF, case: this._guideCase, bank: this._guideBank, pj: this._guidePJ };
-    el.innerHTML = (tabs[tab] || tabs.overview).call(this);
+    const tabs = { system: this._guideSystem, overview: this._guideOverview, debtor: this._guideDebtor, cf: this._guideCF, case: this._guideCase, bank: this._guideBank, pj: this._guidePJ };
+    el.innerHTML = (tabs[tab] || tabs.system).call(this);
   },
+
+  // 0. システム活用ガイド（搭載機能全解説）
+  _guideSystem() {
+    return `
+    <div class="report-subtitle" style="color:var(--accent-primary);">🚀 LOAN CRAFT ENGINE v5 搭載機能と活用フロー</div>
+    
+    <div class="glass-card" style="padding:16px;margin-bottom:12px;border-left:4px solid var(--accent-primary);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">1️⃣ データ入力・基盤構築</div>
+      <div style="font-size:11px;line-height:1.8;">
+        <strong>【 /DNA 】または【 /Excel読込 】</strong><br>
+        企業の基本情報と財務状況をシステムに記憶させます。決算書のExcelファイル（TFS形式や汎用フォーマット等）をドラッグ＆ドロップするだけで、数秒で売上・利益・資産・負債などの主要勘定科目を自動抽出し、DNAプロファイルとして保存します。<br>
+        <strong>【 /決算取込 】</strong><br>
+        手入力で決算データ（PL/BS/CF、最大2期比較）を入れたい場合に使用します。
+      </div>
+    </div>
+
+    <div class="glass-card" style="padding:16px;margin-bottom:12px;border-left:4px solid var(--accent-green);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">2️⃣ 銀行目線での自動審査・シミュレーション（一番重要）</div>
+      <div style="font-size:11px;line-height:1.8;">
+        <strong>【 /格付判定 】（債務者区分のシミュレーション）</strong><br>
+        入力されたデータをもとに、10種類以上の銀行指標（債務償還年数、EBITDA倍率、DSCR、実質債務超過等）を瞬時に計算し、「正常先」か「要注意先」かを自動判定します。<br><br>
+        <span style="color:var(--accent-primary);font-weight:700;">✨ 融資最適化シミュレーター（目標逆算）</span><br>
+        格付判定画面のシミュレーターボタンを押すと、<strong>「融資に通る（正常先になる）ためには、あといくら利益が必要か（または負債を減らせばいいか）」をシステムが自動で逆算</strong>します。「ワンクリック反映」ボタンで、逆算された見込み数値を判定画面に一瞬でセット・再計算でき、経営会議ですぐに改善目標として提示できます。<br><br>
+        <span style="color:var(--accent-gold);font-weight:700;">✏️ 財務数値の直接シミュレーション</span><br>
+        格付判定画面上で、売上高や現預金、減価償却費などの10項目を直接書き換えて「判定を更新」ボタンを押すだけで、何度でも即座に格付の変化（What-If分析）を確認できます。
+      </div>
+    </div>
+
+    <div class="glass-card" style="padding:16px;margin-bottom:12px;border-left:4px solid var(--accent-gold);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">3️⃣ BSのクレンジング（実態修正）</div>
+      <div style="font-size:11px;line-height:1.8;">
+        <strong>【 /実態修正 】および【 /個人資産緩和 】</strong><br>
+        決算書通りでは債務超過（要注意先）でも、実態を反映させれば正常先になり得ます。<br>
+        回収不能な売掛金や不良在庫をマイナスし、反対に「社長個人の現預金」や「社長への借入金（役員借入金）の資本振替（DES）」をシステム上でぶつけることで、実質的なBSを綺麗（資産超過状態）にするシミュレーションが行えます。
+      </div>
+    </div>
+
+    <div class="glass-card" style="padding:16px;margin-bottom:12px;border-left:4px solid var(--accent-cyan);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">4️⃣ 融資申請用のアウトプット作成</div>
+      <div style="font-size:11px;line-height:1.8;">
+        <strong>【 /事業計画 】および【 /Excel出力 】</strong><br>
+        ここまでのシミュレーションで設定した「目指すべき売上・利益」をベースに、10年分の事業計画書を自動生成します。「事業計画サマリー」「単体PL」「連結PL（グループ企業がある場合）」「設備投資計画」「借入金返済計画」などのシートに一発出力できます。<br><br>
+        <strong>【 /シナリオ 】</strong><br>
+        計画に対して想定される「楽観・基本・悲観」の3パターンのストレスシナリオを生成し、「売上が15%ダウンしても返済は回るか？」の証明材料（キャッシュフロー感度分析）を提示できます。<br><br>
+        <strong>【 /案件判断 】</strong><br>
+        設備資金や運転資金として、今回の「借入希望額」と設定した「返済期間」が、キャッシュフローに対して適正かどうかをジャッジします。
+      </div>
+    </div>
+
+    <div class="glass-card" style="padding:16px;margin-bottom:12px;border-left:4px solid #9c27b0;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">5️⃣ 特殊機能・応用編</div>
+      <div style="font-size:11px;line-height:1.8;">
+        <strong>【 /連結決算 】（グループ企業合算）</strong><br>
+        最大5社までの子会社・関連会社の決算データを合算します。売上高規模が小さい（5%未満等）会社を自動で切り捨てる機能も備えており、銀行と同じ目線でのグループ全体評価が可能です。<br><br>
+        <strong>【 /AIコメント 】（稟議書ドラフト）</strong><br>
+        最新の生成AI（OpenAI）と連携し、銀行の審査担当者がそのまま稟議書にコピペできるレベルの「プロフェッショナルな定性評価コメント（強み・懸念点・結論）」を自動生成します。
+      </div>
+    </div>
+    `;
+  },
+
 
   // 1. 全体像
   _guideOverview() {
