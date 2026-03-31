@@ -623,6 +623,124 @@ const SuperAdmin = {
   },
 
   /* ================================================================
+   * SaaS管理 (テナント管理)
+   * ================================================================ */
+  async renderSaaS() {
+    let tenants = [];
+    try {
+      tenants = await ApiClient.getAdminTenants() || [];
+    } catch(e) { console.warn('テナント取得エラー', e); }
+
+    let html = `<div class="report-subtitle">🚀 SaaS管理（テナント一覧）</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-primary btn-sm" onclick="SuperAdmin.showAddTenantForm()">➕ 新規テナント登録</button>
+      </div>`;
+
+    if (tenants.length > 0) {
+      html += `<div style="overflow-x:auto;"><table class="data-table"><thead><tr>
+        <th>ID</th><th>テナント名</th><th>プラン</th><th>ステータス</th><th>ユーザー数</th><th>OpenAIキー</th><th>作成日</th><th>操作</th>
+      </tr></thead><tbody>`;
+      tenants.forEach(t => {
+        const badge = t.status === 'Active' ? '<span style="color:var(--accent-green);font-weight:600;">Active</span>' :
+                      t.status === 'Suspended' ? '<span style="color:var(--accent-gold);font-weight:600;">Suspended</span>' :
+                      '<span style="color:var(--text-muted);font-weight:600;">Unknown</span>';
+        const apiKeyStatus = t.openai_api_key ? '<span style="color:var(--accent-green);">設定済</span>' : '<span style="color:var(--text-muted);">未設定</span>';
+        html += `<tr>
+          <td style="font-size:11px;color:var(--text-muted);">${t.id}</td>
+          <td style="font-weight:600;">${t.name}</td>
+          <td><span style="padding:2px 8px;border-radius:12px;font-size:11px;background:var(--bg-tertiary);font-weight:600;">${t.plan || 'Free'}</span></td>
+          <td>${badge}</td>
+          <td style="font-weight:600;text-align:center;">${t.user_count || 0}</td>
+          <td style="font-size:11px;">${apiKeyStatus}</td>
+          <td style="font-size:11px;">${t.created_at ? new Date(t.created_at).toLocaleDateString('ja-JP') : '—'}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" style="padding:4px 8px;font-size:11px;" onclick="SuperAdmin.showEditTenantForm(${t.id}, '${t.name}', '${t.plan}', '${t.status}', '${t.openai_api_key || ''}')">⚙️ 編集</button>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table></div>`;
+    } else {
+      html += `<div style="text-align:center;padding:24px;color:var(--text-muted);">テナントが登録されていません</div>`;
+    }
+
+    return html;
+  },
+
+  showAddTenantForm() {
+    let html = `<div class="glass-card highlight">
+      <div class="report-title">➕ 新規テナント登録</div>
+      <div style="display:grid;gap:10px;">
+        <div><label style="font-size:12px;font-weight:600;">テナント名（企業名・組織名） <span style="color:var(--accent-red);">*</span></label>
+          <input id="sNewTenantName" type="text" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;"></div>
+        <div><label style="font-size:12px;font-weight:600;">プラン</label>
+          <select id="sNewTenantPlan" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;">
+            <option value="Free">Free</option><option value="Basic">Basic</option>
+            <option value="Pro" selected>Pro</option><option value="Enterprise">Enterprise</option>
+          </select></div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="SuperAdmin.addTenant()">💾 登録</button>
+        <button class="btn btn-secondary" onclick="SuperAdmin.show('saas')">キャンセル</button>
+      </div>
+    </div>`;
+    App.addSystemMessage(html);
+  },
+
+  async addTenant() {
+    const name = document.getElementById('sNewTenantName')?.value.trim();
+    const plan = document.getElementById('sNewTenantPlan')?.value;
+    if (!name) { App.addSystemMessage(Utils.createAlert('warning', '⚠️', 'テナント名は必須です')); return; }
+    try {
+      await ApiClient.addAdminTenant({ name, plan });
+      App.addSystemMessage(Utils.createAlert('success', '✅', `テナント「${name}」を登録しました`));
+      this.show('saas');
+    } catch(e) {
+      App.addSystemMessage(Utils.createAlert('error', '❌', e.message));
+    }
+  },
+
+  showEditTenantForm(id, name, plan, status, apiKey) {
+    let html = `<div class="glass-card highlight">
+      <div class="report-title">⚙️ テナント設定編集 — ${name}</div>
+      <div style="display:grid;gap:10px;">
+        <div><label style="font-size:12px;font-weight:600;">テナント名</label>
+          <input id="sEditTenantName" type="text" value="${name}" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;"></div>
+        <div><label style="font-size:12px;font-weight:600;">プラン</label>
+          <select id="sEditTenantPlan" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;">
+            ${['Free','Basic','Pro','Enterprise'].map(p => `<option value="${p}" ${plan===p?'selected':''}>${p}</option>`).join('')}
+          </select></div>
+        <div><label style="font-size:12px;font-weight:600;">ステータス</label>
+          <select id="sEditTenantStatus" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;">
+            ${['Active','Suspended'].map(s => `<option value="${s}" ${status===s?'selected':''}>${s}</option>`).join('')}
+          </select></div>
+        <div><label style="font-size:12px;font-weight:600;">OpenAI APIキー (テナント専用)</label>
+          <input id="sEditTenantApiKey" type="password" value="${apiKey}" placeholder="sk-..." style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;margin-top:4px;">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">入力がない場合はシステム共通のAPIキーが使用されます。</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="SuperAdmin.updateTenant(${id})">💾 保存</button>
+        <button class="btn btn-secondary" onclick="SuperAdmin.show('saas')">キャンセル</button>
+      </div>
+    </div>`;
+    App.addSystemMessage(html);
+  },
+
+  async updateTenant(id) {
+    const name = document.getElementById('sEditTenantName')?.value.trim();
+    const plan = document.getElementById('sEditTenantPlan')?.value;
+    const status = document.getElementById('sEditTenantStatus')?.value;
+    const openai_api_key = document.getElementById('sEditTenantApiKey')?.value.trim();
+    try {
+      await ApiClient.updateAdminTenant(id, { name, plan, status, openai_api_key });
+      App.addSystemMessage(Utils.createAlert('success', '✅', 'テナント設定を更新しました'));
+      this.show('saas');
+    } catch(e) {
+      App.addSystemMessage(Utils.createAlert('error', '❌', e.message));
+    }
+  },
+
+  /* ================================================================
    * サイドバー表示制御
    * ================================================================ */
   initSidebar() {

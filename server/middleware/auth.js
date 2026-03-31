@@ -16,7 +16,7 @@ function authenticate(req, res, next) {
     }
   }
   // デフォルトユーザー（ログイン不要モード — 最高管理者として動作）
-  req.user = { id: 1, email: SUPER_ADMIN, name: '管理者', role: 'super_admin' };
+  req.user = { id: 1, email: SUPER_ADMIN, name: '管理者', role: 'super_admin', tenant_id: 1 };
   next();
 }
 
@@ -31,7 +31,7 @@ function requireSuperAdmin(req, res, next) {
 // トークン生成
 function generateToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, name: user.name, role: user.role },
+    { id: user.id, email: user.email, name: user.name, role: user.role, tenant_id: user.tenant_id },
     SECRET,
     { expiresIn: '7d' }
   );

@@ -173,6 +173,7 @@ async function getDb() {
       CREATE TABLE IF NOT EXISTS credit_ratings (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
+        tenant_id INTEGER DEFAULT 1,
         company_name TEXT,
         rating_date TIMESTAMPTZ DEFAULT NOW(),
         quantitative_scores TEXT,
@@ -187,8 +188,39 @@ async function getDb() {
         report_html TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      
+      CREATE TABLE IF NOT EXISTS tenants (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        plan TEXT DEFAULT 'Free',
+        status TEXT DEFAULT 'Active',
+        api_token_usage INTEGER DEFAULT 0,
+        openai_api_key TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
-    console.log('  ✅ PostgreSQLテーブル初期化完了');
+    
+    // ▼ 既存環境へのマイグレーション（tenant_id カラムの追加）
+    const tables = [
+      'users', 'company_data', 'rating_results', 'cases', 'audit_logs', 'api_usage',
+      'license_keys', 'file_versions', 'saved_documents', 'learning_cases', 'schedules',
+      'financial_statements', 'business_plans', 'credit_ratings'
+    ];
+    for (const t of tables) {
+      try {
+        await client.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS tenant_id INTEGER DEFAULT 1;`);
+      } catch (e) {
+        console.warn(\`⚠️ \${t} テーブルへの tenant_id 追加スキップ: \`, e.message);
+      }
+    }
+    
+    // ▼ デフォルトテナント（ID=1）の確保
+    try {
+      await client.query(\`INSERT INTO tenants (id, name, plan) VALUES (1, 'Default Tenant', 'Pro') ON CONFLICT DO NOTHING;\`);
+    } catch(e) {}
+    
+    console.log('  ✅ PostgreSQLテーブル初期化＆マイグレーション完了');
   } finally {
     client.release();
   }

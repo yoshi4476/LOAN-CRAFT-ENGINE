@@ -111,6 +111,15 @@ const ApiClient = {
   async getAdminLogs() {
     return await this.request('/api/admin/logs');
   },
+  async getAdminTenants() {
+    return await this.request('/api/admin/tenants');
+  },
+  async addAdminTenant(data) {
+    return await this.request('/api/admin/tenants', { method: 'POST', body: JSON.stringify(data) });
+  },
+  async updateAdminTenant(id, data) {
+    return await this.request(`/api/admin/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
 
   // --- ドキュメント保存 ---
   async getDocuments() {

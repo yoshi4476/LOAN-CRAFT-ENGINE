@@ -1,4 +1,4 @@
-﻿/* 最高管理者API（sql.js対応） */
+/* 最高管理者API（sql.js対応） */
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -9,20 +9,21 @@ router.use(authenticate, requireSuperAdmin);
 
 // ダッシュボード
 router.get('/dashboard', async (req, res) => {
+  const totalTenants = (await dbGet("SELECT COUNT(*) as count FROM tenants", []) || {}).count || 0;
   const totalUsers = (await dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL", []) || {}).count || 0;
   const activeUsers = (await dbGet("SELECT COUNT(*) as count FROM users WHERE status = 'Active' AND deleted_at IS NULL", []) || {}).count || 0;
   const planDist = await dbAll("SELECT plan, COUNT(*) as count FROM users WHERE deleted_at IS NULL GROUP BY plan", []);
   const apiStats = await dbGet("SELECT COUNT(*) as calls, COALESCE(SUM(cost), 0) as totalCost, COALESCE(SUM(input_tokens + output_tokens), 0) as totalTokens FROM api_usage", []) || {};
-  const expiringSoon = (await dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL AND renewal_date < datetime('now', '+30 days')", []) || {}).count || 0;
+  const expiringSoon = (await dbGet("SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL AND renewal_date < NOW() + INTERVAL '30 days'", []) || {}).count || 0;
   const recentLogs = await dbAll("SELECT al.*, u.name as user_name FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 20", []);
 
-  res.json({ totalUsers, activeUsers, planDist, apiStats, expiringSoon, recentLogs });
+  res.json({ totalTenants, totalUsers, activeUsers, planDist, apiStats, expiringSoon, recentLogs });
 });
 
 // ユーザー一覧
 router.get('/users', async (req, res) => {
   const { search, plan, status, page = 1, limit = 20 } = req.query;
-  let sql = 'SELECT id, name, email, plan, status, role, joined_at, renewal_date, last_login, deleted_at FROM users WHERE 1=1';
+  let sql = 'SELECT id, tenant_id, name, email, plan, status, role, joined_at, renewal_date, last_login, deleted_at FROM users WHERE 1=1';
   const params = [];
 
   if (search) { sql += ' AND (name LIKE ? OR email LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
@@ -95,8 +96,33 @@ router.delete('/users/:id', async (req, res) => {
 
 // ユーザー復元
 router.post('/users/:id/restore', async (req, res) => {
-  await dbRun('UPDATE users SET status = "Active", deleted_at = NULL, deleted_by = NULL, updated_at = datetime("now") WHERE id = ?', [parseInt(req.params.id)]);
+  await dbRun('UPDATE users SET status = "Active", deleted_at = NULL, deleted_by = NULL, updated_at = NOW() WHERE id = ?', [parseInt(req.params.id)]);
   await dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [req.user.id, 'ADMIN_RESTORE_USER', `ユーザー復元: id=${req.params.id}`]);
+  res.json({ success: true });
+});
+
+// =============================================
+// テナント管理
+// =============================================
+router.get('/tenants', async (req, res) => {
+  const rows = await dbAll('SELECT * FROM tenants ORDER BY created_at DESC');
+  // 各テナントのユーザー数などを取得
+  for (let t of rows) {
+    t.user_count = (await dbGet('SELECT COUNT(*) as count FROM users WHERE tenant_id = ? AND deleted_at IS NULL', [t.id]) || {}).count || 0;
+  }
+  res.json(rows);
+});
+
+router.post('/tenants', async (req, res) => {
+  const { name, plan } = req.body;
+  if (!name) return res.status(400).json({ error: 'テナント名は必須です' });
+  const r = await dbRun('INSERT INTO tenants (name, plan, status) VALUES (?, ?, ?)', [name, plan || 'Free', 'Active']);
+  res.json({ id: r.lastInsertRowid });
+});
+
+router.put('/tenants/:id', async (req, res) => {
+  const { name, plan, status, openai_api_key } = req.body;
+  await dbRun('UPDATE tenants SET name=?, plan=?, status=?, openai_api_key=?, updated_at=NOW() WHERE id=?', [name, plan, status, openai_api_key, parseInt(req.params.id)]);
   res.json({ success: true });
 });
 

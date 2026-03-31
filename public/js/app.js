@@ -85,6 +85,12 @@ const App = {
 
   // アプリ初期化
   init() {
+    // 認証ガード：未ログイン時はログイン画面へリダイレクト
+    if (typeof ApiClient !== 'undefined' && !ApiClient.getToken()) {
+      window.location.href = '/login';
+      return;
+    }
+
     this.setupEventListeners();
     if (typeof AssessmentModes !== 'undefined') AssessmentModes.initFromSettings();
     this.initTheme();

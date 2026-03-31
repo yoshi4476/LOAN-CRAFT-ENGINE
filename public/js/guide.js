@@ -127,51 +127,95 @@ const Guide = {
   showBeginnerGuide() {
     let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
       <div class="report-title">👶 初心者向け財務ガイド（超入門）</div>
-      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:20px;">
-        「決算書が読めない」「銀行が何を言っているか分からない」という方向けに、LOAN CRAFT ENGINEを使う上で最低限知っておきたい用語と見方を優しく解説します。
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">
+        「決算書が読めない」「銀行員が何を言っているか分からない」という方向けに、LOAN CRAFT ENGINEを使う上で最低限知っておきたい用語と、銀行特有の「決算書の見方」を優しく詳細に解説します。
       </p>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+      <div style="display:grid;grid-template-columns:1fr;gap:20px;">
+        
         <!-- PL編 -->
-        <div class="glass-card" style="padding:16px;">
-          <div style="font-size:16px;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">📈 損益計算書（PL）のキホン</div>
-          <div style="font-size:12px;line-height:1.6;">
-            <strong>PLとは？</strong>：1年間でいくら売上て、いくら利益が残ったかの「成績表」です。<br><br>
-            <strong>① 営業利益（えいぎょうりえき）</strong><br>
-            本業で稼いだ利益。売上から原価と経費（人件費や家賃）を引いたもの。<strong>銀行はここを一番見ます。ここが赤字だと「本業がダメ」とみなされ融資が厳しくなります。</strong><br><br>
-            <strong>② 経常利益（けいじょうりえき）</strong><br>
-            営業利益から「支払利息」などを引いたもの。会社全体の日常的な実力を示します。<br><br>
-            <strong>③ 当期純利益（とうきじゅんりえき）</strong><br>
-            税金を払ったあとの、最終的な手残り。
+        <div class="glass-card" style="padding:20px;border-left:5px solid var(--accent-primary);">
+          <div style="font-size:18px;font-weight:700;color:var(--accent-primary);margin-bottom:12px;">📊 損益計算書（PL） 〜「稼ぐ力」の成績表〜</div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">1年間でいくら売上て、何にお金を使い、いくら利益が残ったかを示す「成績表」です。</p>
+          <div style="font-size:13px;line-height:1.8;">
+            <div style="margin-bottom:8px;"><strong>① 売上総利益（粗利: あらり）</strong>＝ 売上高 － 仕入原価<br>
+            <span style="color:var(--text-muted);font-size:12px;">商品の「基本となる儲け（付加価値）」です。粗利が少ないと、たくさん売っても手元にお金が残りません。</span></div>
+            
+            <div style="margin-bottom:8px;"><strong>② 営業利益（えいぎょうりえき） 【★銀行が最も重視！】</strong>＝ 粗利 － 経費（人件費や家賃）<br>
+            <span style="font-size:12px;color:var(--text-primary);background:rgba(108,99,255,0.1);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px;">
+              本業で稼いだ「本当の利益」です。ここが赤字だと銀行は「本業が上手くいっていない（融資しても返せない）」と判断し、一気に審査が厳しくなります。
+            </span></div>
+            
+            <div style="margin-bottom:8px;"><strong>③ 経常利益（けいじょうりえき: ケイツネ）</strong>＝ 営業利益 ＋ 雑収入 － 支払利息<br>
+            <span style="color:var(--text-muted);font-size:12px;">本業以外（利息の支払いなど）も含めた、会社としての「日常的な総合的な実力」を示します。</span></div>
+            
+            <div style="margin-bottom:8px;"><strong>④ 当期純利益（とうきじゅんりえき）</strong>＝ 経常利益 ± 特別な損益（土地の売却等） － 税金<br>
+            <span style="color:var(--text-muted);font-size:12px;">すべての計算を終えて、最終的に残ったお金。これが毎年「純資産」に積み上がっていきます。</span></div>
           </div>
         </div>
 
         <!-- BS編 -->
-        <div class="glass-card" style="padding:16px;">
-          <div style="font-size:16px;font-weight:700;color:var(--accent-green);margin-bottom:12px;">⚖️ 貸借対照表（BS）のキホン</div>
-          <div style="font-size:12px;line-height:1.6;">
-            <strong>BSとは？</strong>：会社の「財産（資産）」と「借金（負債）」のバランスシートです。<br><br>
-            <strong>① 純資産（自己資本）</strong><br>
-            資産から負債を引いて残る「本当の自分の財産」。これがマイナスになっている状態を<strong>「債務超過（さいむちょうか）」</strong>と呼び、銀行が最も嫌う状態です（融資は原則NG）。<br><br>
-            <strong>② 有利子負債（ゆうりしふさい）</strong><br>
-            銀行借入など、利息をつけて返さなければいけない借金のこと。<br><br>
-            <strong>③ 現預金（手元流動性）</strong><br>
-            銀行は「現預金が月の売上の何ヶ月分あるか（手元流動性）」を見て、倒産リスクを測ります。最低1〜2ヶ月分は必要です。
+        <div class="glass-card" style="padding:20px;border-left:5px solid var(--accent-green);">
+          <div style="font-size:18px;font-weight:700;color:var(--accent-green);margin-bottom:12px;">⚖️ 貸借対照表（BS） 〜「財産」と「借金」のバランス〜</div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">会社が今、「どんな形でお金を持っているか（資産）」「どれくらい借金があるか（負債）」を示す表です。</p>
+          <div style="font-size:13px;line-height:1.8;">
+            <div style="margin-bottom:8px;"><strong>① 資産（左側）</strong><br>
+            <span style="color:var(--text-muted);font-size:12px;">現預金、売掛金（未回収の代金）、在庫、設備など。「集めたお金を何に変えて持っているか」を示します。</span></div>
+
+            <div style="margin-bottom:8px;"><strong>② 負債（右側・上）</strong><br>
+            <span style="color:var(--text-muted);font-size:12px;">買掛金（未払いの代金）や銀行からの借入金など。「いずれ誰かに返さなければいけないお金」のことです。</span></div>
+
+            <div style="margin-bottom:8px;"><strong>③ 純資産 / 自己資本（右側・下） 【★絶対にマイナスにしてはダメ！】</strong>＝ 資産 － 負債<br>
+            <span style="font-size:12px;color:var(--accent-red);background:rgba(231,76,60,0.1);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px;">
+              返さなくていい「本当のあなたの財産（過去の黒字の蓄積）」です。<br>
+              ここがマイナスになっている状態を<strong>「債務超過（さいむちょうか）」</strong>と呼び、倒産リスクが極めて高いと見なされ、原則として新規融資は受けられなくなります。
+            </span></div>
           </div>
         </div>
 
-        <!-- 審査指標編 -->
-        <div class="glass-card" style="padding:16px;">
-          <div style="font-size:16px;font-weight:700;color:var(--accent-gold);margin-bottom:12px;">🏦 銀行の審査でよく出る言葉</div>
-          <div style="font-size:12px;line-height:1.6;">
-            <strong>① 債務償還年数（さいむしょうかんねんすう）★最重要</strong><br>
-            「今の借金を、今の利益ペースで返すと何年かかるか」という年数。<strong>原則10年以内</strong>であれば正常先と見なされ安全圏です。15年を超えると黄色信号です。<br><br>
-            <strong>② 運転資金（うんてんしきん）</strong><br>
-            仕入れ代金を先に払って、売上が後から入ってくるまでの「立替期間」を埋めるために必要なお金。事業が成長するほど多額の運転資金が必要になります。<br><br>
-            <strong>③ リスケジュール（リスケ）</strong><br>
-            毎月の借入返済を減額・猶予してもらうこと。リスケ中は原則として「新規の融資」は受けられなくなります。
+        <!-- 審査用語編 -->
+        <div class="glass-card" style="padding:20px;border-left:5px solid var(--accent-gold);">
+          <div style="font-size:18px;font-weight:700;color:var(--accent-gold);margin-bottom:12px;">🏦 銀行員がよく使う「魔法の言葉」</div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">面談で銀行員が口にする専門用語と、その「本当の意図」を解説します。</p>
+          <div style="font-size:13px;line-height:1.8;">
+            <div style="margin-bottom:12px;">
+              <span style="display:inline-block;background:var(--bg-tertiary);padding:2px 8px;border-radius:12px;font-weight:700;margin-bottom:4px;">債務償還年数（さいむしょうかんねんすう）★最重要指標</span><br>
+              「いまの借金総額を、いまの利益スピードで返済すると何年かかるか？」という年数。<br>
+              <strong>【銀行の目線】</strong>「10年以内なら安全に返せるね（合格！）」「15年を超えると危ないな…融資は厳しいかも」
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <span style="display:inline-block;background:var(--bg-tertiary);padding:2px 8px;border-radius:12px;font-weight:700;margin-bottom:4px;">手元流動性（てもとりゅうどうせい）</span><br>
+              月々の売上高に対して、手元に現預金が何ヶ月分あるか。<br>
+              <strong>【銀行の目線】</strong>「現預金が1.5ヶ月〜2ヶ月分ないと、資金ショート（倒産）の危険がある。借入してでも厚く持っておくべき」
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <span style="display:inline-block;background:var(--bg-tertiary);padding:2px 8px;border-radius:12px;font-weight:700;margin-bottom:4px;">実質債務超過（じっしつさいむちょうか）</span><br>
+              決算書上は純資産プラス（正常）でも、回収不能な売掛金や価値のない在庫を「銀行の厳しい目」でマイナス評価（実態修正）した結果、実は債務超過であるとみなされる状態。<br>
+              <strong>【銀行の目線】</strong>「社長、この『仮払金』や戻ってこない『社長貸付金』は資産価値ゼロですよね。これを引くと御社は実質アウトです」
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <span style="display:inline-block;background:var(--bg-tertiary);padding:2px 8px;border-radius:12px;font-weight:700;margin-bottom:4px;">運転資金（うんてんしきん）</span><br>
+              「売上がすぐに入金されない（掛売り）」などの理由で、仕入れや給料の支払いを一時的に立て替えるために必要な資金。<br>
+              <strong>【銀行の目線】</strong>「売上が伸びるほど運転資金が必要になるのは当然だから、これは前向きな借金（融資対象）としてOK」
+            </div>
           </div>
         </div>
+
+        <!-- 融資獲得のコツ -->
+        <div class="glass-card" style="padding:20px;border-left:5px solid var(--accent-cyan);">
+          <div style="font-size:18px;font-weight:700;color:var(--accent-cyan);margin-bottom:12px;">💡 融資通過のための「最初の一歩」</div>
+          <div style="font-size:13px;line-height:1.8;">
+            <ul style="padding-left:20px;">
+              <li style="margin-bottom:8px;"><strong>数字の「理由」を語れるようにする</strong><br>なぜ赤字になったのか、なぜ来季は黒字になるのか。「なんとなく」ではなく「この設備を入れるから人件費が○○万円浮く」とロジックで説明できるようにしましょう。</li>
+              <li style="margin-bottom:8px;"><strong>税金の未納は絶対にNG</strong><br>法人税や消費税、社会保険料の未納・滞納がある場合、政府系金融機関（日本政策金融公庫）や信用保証協会付きの融資は99%通りません。必ず完納または分納誓約を行ってから申し込みましょう。</li>
+              <li><strong>システム（AI）を活用して予行演習を！</strong><br>LOAN CRAFT ENGINEの「格付け診断」を使えば、事前に銀行からどう思われるかが分かります。「AI面談」機能を使って、ツッコミに対する返答の練習をしてから銀行に向かいましょう。</li>
+            </ul>
+          </div>
+        </div>
+
       </div>
     </div>`;
     App.addSystemMessage(html);

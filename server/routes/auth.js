@@ -1,4 +1,4 @@
-﻿/* 認証API（sql.js対応） */
+/* 認証API（sql.js対応） */
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
@@ -20,13 +20,14 @@ router.post('/register', async (req, res) => {
     const role = email === SUPER_ADMIN ? 'super_admin' : 'user';
     const renewalDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
-    const result = await dbRun('INSERT INTO users (name, email, password_hash, role, plan, renewal_date) VALUES (?, ?, ?, ?, ?, ?)', [name, email, hash, role, 'Free', renewalDate]);
+    // デフォルトテナント（1）に所属させる（※本運用ではテナント作成APIで対応）
+    const result = await dbRun('INSERT INTO users (name, email, password_hash, role, plan, renewal_date, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)', [name, email, hash, role, 'Free', renewalDate, 1]);
 
     const user = await dbGet('SELECT * FROM users WHERE id = ?', [result.lastInsertRowid]);
     const token = generateToken(user);
-    await dbRun('INSERT INTO audit_logs (user_id, action, detail) VALUES (?, ?, ?)', [user.id, 'REGISTER', `新規登録: ${email}`]);
+    await dbRun('INSERT INTO audit_logs (user_id, action, detail, tenant_id) VALUES (?, ?, ?, ?)', [user.id, 'REGISTER', `新規登録: ${email}`, 1]);
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan, renewalDate: user.renewal_date } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan, renewalDate: user.renewal_date, tenant_id: user.tenant_id } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -43,11 +44,11 @@ router.post('/login', async (req, res) => {
     if (!bcrypt.compareSync(password, user.password_hash)) return res.status(401).json({ error: 'メールアドレスまたはパスワードが正しくありません' });
     if (user.status === 'Suspended') return res.status(403).json({ error: 'アカウントが停止されています' });
 
-    await dbRun('UPDATE users SET last_login = datetime("now"), updated_at = datetime("now") WHERE id = ?', [user.id]);
+    await dbRun('UPDATE users SET last_login = NOW(), updated_at = NOW() WHERE id = ?', [user.id]);
     const token = generateToken(user);
-    await dbRun('INSERT INTO audit_logs (user_id, action) VALUES (?, ?)', [user.id, 'LOGIN']);
+    await dbRun('INSERT INTO audit_logs (user_id, action, tenant_id) VALUES (?, ?, ?)', [user.id, 'LOGIN', user.tenant_id]);
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan, renewalDate: user.renewal_date } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan, renewalDate: user.renewal_date, tenant_id: user.tenant_id } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -55,8 +56,12 @@ router.post('/login', async (req, res) => {
 
 // 自分の情報
 router.get('/me', authenticate, async (req, res) => {
-  const user = await dbGet('SELECT id, name, email, role, plan, status, renewal_date, joined_at, last_login FROM users WHERE id = ?', [req.user.id]);
+  const user = await dbGet('SELECT id, name, email, role, plan, status, renewal_date, joined_at, last_login, tenant_id FROM users WHERE id = ?', [req.user.id]);
   if (!user) return res.status(404).json({ error: 'ユーザーが見つかりません' });
+  
+  const tenant = await dbGet('SELECT * FROM tenants WHERE id = ?', [user.tenant_id]);
+  user.tenant = tenant || null;
+  
   res.json(user);
 });
 
