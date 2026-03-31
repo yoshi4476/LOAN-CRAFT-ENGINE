@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - 統合資料生成エンジン
  * DNA＋案件データ → AIが銀行提出レベルの書類を自動生成
  * テンプレ版とAI版を統合、10種類の資料＋整合チェック
@@ -299,38 +299,86 @@ const DocGenerator = {
     if (chatMessages) chatMessages.innerHTML = html;
   },
 
-  // Markdown→HTML簡易レンダリング
+  // Markdown→HTMLプレミアムレンダリング
   renderMarkdown(text) {
     let html = Utils.escapeHtml(text);
-    // 見出し
-    html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:700;color:var(--primary-light);margin:20px 0 8px;border-left:3px solid var(--primary);padding-left:10px;">$1</h3>');
-    html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;color:var(--text-primary);margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border-secondary);">$1</h2>');
-    html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:20px;font-weight:800;color:var(--text-primary);margin:24px 0 16px;">$1</h1>');
-    // 太字
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    // テーブル（Markdown表）
+    
+    // アラート／ハイライト（> [!IMPORTANT] や > [!NOTE] の処理）
+    // 先にブロッククオートとして処理
+    html = html.replace(/^> \[!IMPORTANT\]\s*\n((?:> .*\n?)+)/gm, (match, p1) => {
+      const content = p1.replace(/^> /gm, '').replace(/\n/g, '<br>');
+      return `<div style="margin:20px 0;padding:16px 20px;background:rgba(239,68,68,0.08);border-left:4px solid #ef4444;border-radius:0 8px 8px 0;">
+                <div style="font-weight:700;color:#b91c1c;margin-bottom:8px;font-size:14px;display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:16px;">🚨</span> IMPORTANT
+                </div>
+                <div style="color:#7f1d1d;line-height:1.6;font-size:13px;">${content}</div>
+              </div>`;
+    });
+    
+    html = html.replace(/^> \[!NOTE\]\s*\n((?:> .*\n?)+)/gm, (match, p1) => {
+      const content = p1.replace(/^> /gm, '').replace(/\n/g, '<br>');
+      return `<div style="margin:20px 0;padding:16px 20px;background:rgba(59,130,246,0.08);border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;">
+                <div style="font-weight:700;color:#1d4ed8;margin-bottom:8px;font-size:14px;display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:16px;">💡</span> NOTE
+                </div>
+                <div style="color:#1e3a8a;line-height:1.6;font-size:13px;">${content}</div>
+              </div>`;
+    });
+
+    // 一般的な引用ブロック（> ...）
+    html = html.replace(/(^> .*\n?)+/gm, (match) => {
+      // ハイライト変換されたものはスキップ
+      if (match.includes('<div style="margin:20px 0')) return match;
+      const content = match.replace(/^> /gm, '').replace(/\n/g, '<br>');
+      return `<div style="margin:20px 0;padding:16px 20px;background:var(--bg-tertiary);border-left:4px solid var(--border-primary);border-radius:0 8px 8px 0;color:var(--text-secondary);font-size:13px;font-style:italic;">
+                ${content}
+              </div>`;
+    });
+
+    // 見出し（プロフェッショナルなデザイン）
+    html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:700;color:var(--text-primary);margin:24px 0 12px;padding-left:12px;position:relative;display:flex;align-items:center;"><span style="position:absolute;left:0;top:-2px;bottom:-2px;width:4px;background:var(--accent-cyan);border-radius:4px;"></span>$1</h3>');
+    
+    html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:17px;font-weight:700;color:var(--text-primary);margin:32px 0 16px;padding:10px 14px;background:linear-gradient(90deg, rgba(108,99,255,0.1) 0%, rgba(108,99,255,0) 100%);border-bottom:2px solid var(--primary);border-radius:4px 4px 0 0;">$1</h2>');
+    
+    html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:22px;font-weight:800;color:var(--text-primary);margin:32px 0 24px;text-align:center;letter-spacing:1px;position:relative;padding-bottom:12px;"><span style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:60px;height:4px;background:var(--primary);border-radius:2px;"></span>$1</h1>');
+    
+    // 太字（アクセント）
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700;background:linear-gradient(transparent 70%, rgba(108,99,255,0.2) 70%);">$1</strong>');
+    
+    // テーブル（Markdown表） - 洗練されたストライプ・ホバー対応デザイン
     html = html.replace(/^\|(.+)\|$/gm, (match) => {
       const cells = match.split('|').filter(c => c.trim() !== '');
       if (cells.every(c => /^[\s-:]+$/.test(c))) return '';
       const isHeader = cells.some(c => /^\s*---/.test(c));
       if (isHeader) return '';
-      const tds = cells.map(c => `<td style="padding:8px 12px;border:1px solid var(--border-secondary);">${c.trim()}</td>`).join('');
-      return `<tr>${tds}</tr>`;
+      // 中央揃え、右揃えの簡易判定（本来は---の配置を見るが簡易的に）
+      const tds = cells.map(c => `<td style="padding:10px 14px;border-bottom:1px solid var(--border-secondary);color:var(--text-secondary);">${c.trim()}</td>`).join('');
+      return `<tr style="transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">${tds}</tr>`;
     });
-    html = html.replace(/(<tr>.+<\/tr>\n?)+/g, (match) => {
+    
+    html = html.replace(/(<tr.+\/tr>\n?)+/g, (match) => {
       const rows = match.trim().split('\n').filter(r => r.trim());
       if (rows.length === 0) return match;
-      const firstRow = rows[0].replace(/<td/g, '<th').replace(/<\/td/g, '</th');
+      const firstRow = rows[0]
+        .replace(/<td/g, '<th')
+        .replace(/<\/td>/g, '</th>')
+        .replace(/border-bottom:1px solid [^;]+;/, 'border-bottom:2px solid var(--primary);background:var(--bg-secondary);color:var(--text-primary);font-weight:600;');
       const rest = rows.slice(1).join('\n');
-      return `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;">${firstRow}${rest}</table>`;
+      return `<div style="overflow-x:auto;margin:20px 0;border:1px solid var(--border-secondary);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.05);"><table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">${firstRow}${rest}</table></div>`;
     });
-    // 箇条書き
-    html = html.replace(/^[\-\*] (.+)$/gm, '<li style="margin:4px 0;padding-left:4px;">$1</li>');
-    html = html.replace(/(<li.+<\/li>\n?)+/g, '<ul style="margin:8px 0 8px 16px;list-style:disc;">$&</ul>');
-    // 番号付き
-    html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin:4px 0;">$1</li>');
-    // 改行
+    
+    // リスト（箇条書き） - チェックマーク風の洗練されたアイコン
+    html = html.replace(/^[\-\*] (.+)$/gm, '<li style="margin:8px 0;padding-left:12px;position:relative;list-style-type:none;"><span style="position:absolute;left:-8px;color:var(--accent-green);font-size:14px;line-height:1.2;">✓</span><span style="color:var(--text-secondary);">$1</span></li>');
+    html = html.replace(/(<li.+<\/li>\n?)+/g, '<ul style="margin:16px 0 16px 12px;padding:0;">$&</ul>');
+    
+    // 番号付きリスト - ビジネスライクなサークル番号
+    html = html.replace(/^(\d+)\. (.+)$/gm, '<li style="margin:10px 0;padding-left:8px;position:relative;list-style-type:none;counter-increment:my-counter;"><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--primary-light);color:white;font-size:10px;font-weight:700;margin-right:10px;position:absolute;left:-24px;top:0;">$1</span><span style="color:var(--text-secondary);">$2</span></li>');
+    html = html.replace(/(<li.+counter-increment:my-counter.+<\/li>\n?)+/g, '<ol style="margin:16px 0 16px 24px;padding:0;counter-reset:my-counter;">$&</ol>');
+    
+    // 改行（余分な連続改行は整理）
+    html = html.replace(/\n\n+/g, '<div style="height:12px;"></div>');
     html = html.replace(/\n/g, '<br>');
+    
     return html;
   },
 
@@ -346,25 +394,42 @@ const DocGenerator = {
     wrapper.style.cssText = `background:#fff;color:#1a1a2e;padding:32px 40px;font-family:"Noto Sans JP","Hiragino Sans",sans-serif;font-size:11px;line-height:1.7;max-width:290mm;`;
     wrapper.innerHTML = `
       <style>
-        .doc-preview h1{font-size:16px;color:#1a1a2e;border-bottom:3px solid #2563eb;padding-bottom:8px;margin:0 0 16px 0;}
-        .doc-preview h2{font-size:13px;color:#1e40af;margin:16px 0 8px;padding-left:8px;border-left:4px solid #2563eb;}
-        .doc-preview h3{font-size:12px;color:#374151;margin:12px 0 6px;}
-        .doc-preview table{width:100%;border-collapse:collapse;margin:8px 0 12px;font-size:10px;}
-        .doc-preview th{background:#1e3a5f;color:#fff;padding:6px 8px;text-align:left;font-weight:600;white-space:nowrap;}
-        .doc-preview td{padding:5px 8px;border-bottom:1px solid #e5e7eb;}
+        :root {
+          --primary: #4f46e5;
+          --primary-light: #6366f1;
+          --text-primary: #0f172a;
+          --text-secondary: #334155;
+          --text-muted: #64748b;
+          --bg-primary: #ffffff;
+          --bg-secondary: #f8fafc;
+          --bg-tertiary: #f1f5f9;
+          --border-primary: #cbd5e1;
+          --border-secondary: #e2e8f0;
+          --accent-cyan: #06b6d4;
+          --accent-green: #10b981;
+        }
+        /* PDF特有のレイアウト調整（改ページ防止など） */
+        div, table, tr, li { page-break-inside: avoid; }
+        h1, h2, h3 { page-break-after: avoid; }
+        .doc-preview h1{font-size:18px;color:#0f172a;border-bottom:3px solid #4f46e5;padding-bottom:8px;margin:10px 0 20px 0;}
+        .doc-preview h2{font-size:15px;color:#1e40af;margin:24px 0 12px;padding-left:10px;border-left:4px solid #4f46e5;}
+        .doc-preview h3{font-size:13px;color:#334155;margin:16px 0 8px;}
+        .doc-preview table{width:100%;border-collapse:collapse;margin:12px 0 16px;font-size:11px;}
+        .doc-preview th{background:#1e3a5f;color:#fff;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap;}
+        .doc-preview td{padding:6px 10px;border-bottom:1px solid #e2e8f0;color:#334155;}
         .doc-preview tr:nth-child(even){background:#f8fafc;}
         .doc-preview .risk-red{color:#dc2626;font-weight:700;}
         .doc-preview .ok-green{color:#16a34a;font-weight:700;}
         .doc-preview .warn-yellow{color:#d97706;font-weight:700;}
         .doc-preview .bar-container{background:#e5e7eb;border-radius:4px;overflow:hidden;height:12px;margin:2px 0;}
         .doc-preview .bar-fill{height:100%;border-radius:4px;}
-        .doc-preview .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px;}
-        .doc-preview .kpi-card{padding:10px;border:1px solid #e5e7eb;border-radius:6px;text-align:center;}
-        .doc-preview .kpi-value{font-size:18px;font-weight:800;color:#1e40af;}
-        .doc-preview .kpi-label{font-size:9px;color:#6b7280;margin-top:2px;}
-        .doc-preview .summary-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:8px 0;}
-        .doc-preview .danger-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin:8px 0;}
-        .doc-preview .footer{font-size:9px;color:#9ca3af;text-align:right;margin-top:16px;border-top:1px solid #e5e7eb;padding-top:6px;}
+        .doc-preview .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0 16px;}
+        .doc-preview .kpi-card{padding:12px;border:1px solid #cbd5e1;border-radius:8px;text-align:center;background:#fff;}
+        .doc-preview .kpi-value{font-size:20px;font-weight:800;color:#1e40af;}
+        .doc-preview .kpi-label{font-size:10px;color:#64748b;margin-top:4px;}
+        .doc-preview .summary-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:12px 0;}
+        .doc-preview .danger-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:12px 0;}
+        .doc-preview .footer{font-size:10px;color:#9ca3af;text-align:right;margin-top:24px;border-top:1px solid #e2e8f0;padding-top:8px;}
       </style>` + el.innerHTML;
 
     const opt = {
@@ -663,7 +728,14 @@ ${bankProfiles[target] || bankProfiles.general}
 7. **制度融資の最適活用**：使える制度融資・保証制度がある場合は具体的な制度名と適用条件を明記する
 8. **日本語で出力**：資料は全て日本語、金額は万円単位、表は markdown のテーブル記法を使用
 9. **返済原資の多重防御**：返済原資は「本業CF→遊休資産売却→代表者報酬返上→保険解約返戻金」の多段階で構築
-10. **実態BSの活用**：簿価と実態値の乖離を必ず指摘し、修正後の財務指標で審査を有利にする`
+10. **実態BSの活用**：簿価と実態値の乖離を必ず指摘し、修正後の財務指標で審査を有利にする
+11. **ハイライト構文の活用**：特に支店長や審査役が見るべき「重要なポイント」「リスクと対策」「審査の急所」については、以下の専用構文を使用して目立たせてください。
+    - 最重要・リスク等：
+      > [!IMPORTANT]
+      > （内容をここに書く）
+    - 強み・補足事項・アドバイス等：
+      > [!NOTE]
+      > （内容をここに書く）`
 
     + this._buildLearningContext();
   },
