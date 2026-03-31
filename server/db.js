@@ -133,6 +133,60 @@ async function getDb() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS financial_statements (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        company_name TEXT,
+        statement_type TEXT DEFAULT 'standalone',
+        period_label TEXT,
+        period_months INTEGER DEFAULT 12,
+        unit TEXT DEFAULT 'thousand',
+        pl_data TEXT,
+        bs_data TEXT,
+        cf_data TEXT,
+        adjustments TEXT,
+        validation_errors TEXT,
+        is_consolidated INTEGER DEFAULT 0,
+        subsidiaries TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS business_plans (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        version_name TEXT NOT NULL,
+        company_name TEXT,
+        plan_years INTEGER DEFAULT 10,
+        actual_periods INTEGER DEFAULT 3,
+        stress_factor REAL DEFAULT 1.03,
+        corporate_tax_rate REAL DEFAULT 0.35,
+        pl_plan TEXT,
+        bs_plan TEXT,
+        cf_plan TEXT,
+        fixed_assets TEXT,
+        debt_schedule TEXT,
+        segment_details TEXT,
+        is_locked INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS credit_ratings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        company_name TEXT,
+        rating_date TIMESTAMPTZ DEFAULT NOW(),
+        quantitative_scores TEXT,
+        qualitative_scores TEXT,
+        real_bs_adj TEXT,
+        real_pl_adj TEXT,
+        operating_cf REAL,
+        repayment_years REAL,
+        debtor_category TEXT,
+        personal_assets TEXT,
+        adjusted_category TEXT,
+        report_html TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
     console.log('  ✅ PostgreSQLテーブル初期化完了');
   } finally {

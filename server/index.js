@@ -57,6 +57,7 @@ async function startServer() {
   app.use('/api/ai', require('./routes/ai'));
   app.use('/api/admin', require('./routes/admin'));
   app.use('/api/features', require('./routes/features'));
+  app.use('/api/financial', require('./routes/financial-api'));
 
   // SPAフォールバック
   app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
