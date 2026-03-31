@@ -211,13 +211,13 @@ async function getDb() {
       try {
         await client.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS tenant_id INTEGER DEFAULT 1;`);
       } catch (e) {
-        console.warn(\`⚠️ \${t} テーブルへの tenant_id 追加スキップ: \`, e.message);
+        console.warn(`⚠️ ${t} テーブルへの tenant_id 追加スキップ: `, e.message);
       }
     }
     
     // ▼ デフォルトテナント（ID=1）の確保
     try {
-      await client.query(\`INSERT INTO tenants (id, name, plan) VALUES (1, 'Default Tenant', 'Pro') ON CONFLICT DO NOTHING;\`);
+      await client.query(`INSERT INTO tenants (id, name, plan) VALUES (1, 'Default Tenant', 'Pro') ON CONFLICT DO NOTHING;`);
     } catch(e) {}
     
     console.log('  ✅ PostgreSQLテーブル初期化＆マイグレーション完了');
