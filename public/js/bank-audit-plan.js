@@ -1,15 +1,22 @@
 /* ============================================================
  * LOAN CRAFT ENGINE v5.0 - 事業計画モジュール
- * MODULE 2: 10年間事業計画の策定・保存・閲覧
+ * MODULE 2: ★事業計画書フォーム準拠（提出用フォーマット対応）
+ *
+ * シート構成（元Excelフォーマット準拠）:
+ *   1. 事業計画書（提出用）— PL/CF/残高サマリ
+ *   2. 単体事業計画書 — セグメント別詳細PL
+ *   3. 連結事業計画書 — 連結PL
+ *   4. GR合算シート — グループ合算
+ *   5. 固定資産・減価償却費 — CAPEX/償却スケジュール
+ *   6. 有利子負債 — 調達/返済/残高
  * ============================================================ */
 
-// BankAuditオブジェクトに事業計画機能を追加
 Object.assign(BankAudit, {
 
-  // 事業計画エディタ
+  // メインエディタ（6タブ構成）
   showPlanEditor() {
     const dna = Database.loadCompanyData() || {};
-    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+    let html = `<div class="glass-card highlight" style="max-width:1100px;margin:0 auto;">
       <div class="report-title">📈 事業計画策定</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
         <div><label style="font-size:10px;color:var(--text-muted);">バージョン名</label>
@@ -22,188 +29,431 @@ Object.assign(BankAudit, {
           <input id="bp_taxRate" type="number" value="35" style="width:100%;padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:12px;"></div>
       </div>
       <div style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="BankAudit.showPlanPL()">📊 PL計画</button>
-        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showSegmentPlan()">📦 セグメント売上</button>
-        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showFixedAssetSchedule()">🏭 固定資産</button>
-        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showDebtSchedule()">💳 有利子負債</button>
+        <button class="btn btn-primary btn-sm" onclick="BankAudit.showPlanTab('summary')">📋 提出用サマリ</button>
+        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showPlanTab('detail')">📊 単体PL詳細</button>
+        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showPlanTab('consolidated')">🔗 連結計画</button>
+        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showPlanTab('assets')">🏭 固定資産・償却</button>
+        <button class="btn btn-secondary btn-sm" onclick="BankAudit.showPlanTab('debt')">💳 有利子負債</button>
         <button class="btn btn-secondary btn-sm" onclick="BankAudit.showPlanList()">📁 計画一覧</button>
       </div>
-      <div id="bp_content">${this._renderPlanPL()}</div>
+      <div id="bp_content">${this._renderSummaryPlan()}</div>
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="BankAudit.savePlan()">💾 計画保存</button>
         <button class="btn btn-secondary" onclick="BankAudit.lockPlan()">🔒 バージョンロック</button>
         <button class="btn btn-secondary" onclick="BankAudit.showVarianceAnalysis()">📊 乖離分析</button>
+        <button class="btn btn-secondary" onclick="BankAudit.exportPlanExcel()">📥 Excel出力</button>
       </div>
     </div>`;
     App.addSystemMessage(html);
   },
 
-  showPlanPL() {
+  showPlanTab(tab) {
     const el = document.getElementById('bp_content');
-    if (el) el.innerHTML = this._renderPlanPL();
+    if (!el) { this.showPlanEditor(); return; }
+    if (tab === 'summary') el.innerHTML = this._renderSummaryPlan();
+    else if (tab === 'detail') el.innerHTML = this._renderDetailPL();
+    else if (tab === 'consolidated') el.innerHTML = this._renderConsolidatedPlan();
+    else if (tab === 'assets') el.innerHTML = this._renderAssetSchedule();
+    else if (tab === 'debt') el.innerHTML = this._renderDebtSchedule();
   },
 
-  _renderPlanPL() {
-    const periods = ['実績1期','実績2期','実績3期','計画1年','計画2年','計画3年','計画4年','計画5年','計画6年','計画7年','計画8年','計画9年','計画10年'];
+  // ========== シート1: 事業計画書（提出用）==========
+  _renderSummaryPlan() {
+    const cols = ['決算期(実績)','●期','●期','●期','●期','●期'];
+    const colH = cols.map((c,i) => `<th style="padding:4px 6px;text-align:right;font-size:10px;min-width:80px;${i===0?'background:rgba(108,99,255,0.08);':''}">${c}</th>`).join('');
+
     const rows = [
-      {key:'revenue',label:'売上高',cat:'A'},
-      {key:'cogs',label:'売上原価',cat:'A'},
-      {key:'cogsLabor',label:'　労務費',cat:''},
-      {key:'cogsDeprec',label:'　減価償却費',cat:''},
-      {key:'cogsOther',label:'　その他',cat:''},
-      {key:'grossProfit',label:'売上総利益',cat:'A',calc:true},
-      {key:'sgaExp',label:'販管費合計',cat:'B'},
-      {key:'sgaLabor',label:'　人件費',cat:''},
-      {key:'sgaDeprec',label:'　減価償却費',cat:''},
-      {key:'sgaOther',label:'　その他',cat:''},
-      {key:'opProfit',label:'営業利益',cat:'B',calc:true},
-      {key:'nonOpNet',label:'営業外損益（純額）',cat:'C'},
-      {key:'ordProfit',label:'経常利益',cat:'C',calc:true},
-      {key:'specialNet',label:'特別損益（純額）',cat:'D'},
-      {key:'preTaxProfit',label:'税引前利益',cat:'D',calc:true},
-      {key:'tax',label:'法人税等',cat:'E'},
-      {key:'netProfit',label:'当期純利益',cat:'E',calc:true}
+      { key:'prodQty', label:'生産・販売数量（●個）', section:'', stress:false },
+      { key:'revenue', label:'売上高', section:'', stress:false },
+      { key:'cogs', label:'売上原価', section:'', stress:false },
+      { key:'cogsMaterial', label:'　(うち原材料費)', section:'', stress:false },
+      { key:'cogsLabor', label:'　(うち労務費)', section:'', stress:true },
+      { key:'cogsDeprec', label:'　(うち減価償却費)', section:'', stress:false },
+      { key:'sgaExp', label:'一般販管費', section:'', stress:false },
+      { key:'sgaDeprec', label:'　(うち減価償却費)', section:'', stress:false },
+      { key:'opProfit', label:'営業利益', section:'', stress:false, calc:true, bold:true },
+      { key:'nonOpIncome', label:'営業外収益', section:'', stress:false },
+      { key:'nonOpExp', label:'営業外費用', section:'', stress:false },
+      { key:'interestExp', label:'　(うち支払利息)', section:'', stress:false },
+      { key:'preTaxProfit', label:'税引前損益', section:'', stress:false, calc:true, bold:true },
+      { key:'netProfit', label:'税引後損益', section:'', stress:false, calc:true, bold:true },
+      { key:'dividend', label:'配当', section:'', stress:false },
+      { key:'retainedProfit', label:'繰越損益', section:'', stress:false, calc:true },
+      { key:'_sep1', label:'', section:'sep' },
+      { key:'opCF', label:'営業CF', section:'cf', stress:false, bold:true },
+      { key:'investCF', label:'投資CF', section:'cf', stress:false },
+      { key:'freeCF', label:'フリーCF', section:'cf', stress:false, calc:true, bold:true },
+      { key:'financeCF', label:'財務CF', section:'cf', stress:false },
+      { key:'ceoLoan', label:'代表者借入金増減', section:'cf', stress:false },
+      { key:'debtChange', label:'借入金増減', section:'cf', stress:false },
+      { key:'newLoan', label:'　(今次借入分)', section:'cf', stress:false },
+      { key:'endCash', label:'期末現預金残高', section:'cf', stress:false, bold:true }
     ];
 
-    let html = `<div class="report-subtitle" style="font-size:13px;">📊 損益計画（PL）</div>
-    <div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;min-width:1200px;">
-    <thead><tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:4px 6px;text-align:left;min-width:120px;">勘定科目</th>`;
-    periods.forEach((p,i) => {
-      const bg = i < 3 ? 'rgba(108,99,255,0.08)' : 'transparent';
-      html += `<th style="padding:4px 6px;text-align:right;background:${bg};font-size:10px;min-width:80px;">${p}</th>`;
-    });
-    html += `<th style="padding:4px 6px;text-align:right;font-size:10px;">ストレス</th></tr></thead><tbody>`;
+    let html = `<div class="report-subtitle" style="font-size:13px;">📋 事業計画書（提出用）</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">（単位：千円）</div>
+    <div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;min-width:700px;">
+    <thead><tr style="border-bottom:2px solid var(--border-secondary);">
+      <th style="padding:4px 6px;text-align:left;min-width:160px;">項目</th>${colH}
+      <th style="padding:4px;text-align:center;font-size:10px;">ストレス</th>
+    </tr></thead><tbody>`;
 
     rows.forEach(row => {
-      const isBold = row.calc;
+      if (row.section === 'sep') {
+        html += `<tr><td colspan="${cols.length+2}" style="padding:2px;"></td></tr>`;
+        return;
+      }
+      const isBold = row.bold;
+      const isCalc = row.calc;
       html += `<tr style="border-bottom:1px solid var(--border-secondary);${isBold?'font-weight:700;background:rgba(255,255,255,0.02);':''}">
         <td style="padding:4px 6px;font-size:11px;">${row.label}</td>`;
-      periods.forEach((p,i) => {
-        const bg = i < 3 ? 'rgba(108,99,255,0.05)' : '';
-        if (row.calc) {
-          html += `<td style="padding:4px 6px;text-align:right;background:${bg};"><span id="bp_${row.key}_${i}" style="font-size:11px;">0</span></td>`;
+      cols.forEach((c, i) => {
+        const bg = i === 0 ? 'rgba(108,99,255,0.05)' : '';
+        if (isCalc) {
+          html += `<td style="padding:4px 6px;text-align:right;background:${bg};"><span id="sp_${row.key}_${i}" style="font-size:11px;">0</span></td>`;
         } else {
-          html += `<td style="padding:2px;background:${bg};"><input id="bp_${row.key}_${i}" type="number" value="0" onchange="BankAudit.recalcPlan()" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`;
+          html += `<td style="padding:2px;background:${bg};"><input id="sp_${row.key}_${i}" type="number" value="0" onchange="BankAudit.recalcSummary()" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`;
         }
       });
       // ストレス列
-      if (['cogsLabor','cogsOther','sgaLabor','sgaOther'].includes(row.key)) {
-        html += `<td style="padding:4px 6px;text-align:right;font-size:10px;color:var(--accent-gold);">×1.03</td>`;
-      } else {
-        html += `<td></td>`;
-      }
+      html += `<td style="padding:4px;text-align:center;font-size:10px;color:var(--accent-gold);">${row.stress?'×1.03':''}</td>`;
       html += `</tr>`;
     });
     html += `</tbody></table></div>`;
     return html;
   },
 
-  recalcPlan() {
-    for (let i = 0; i < 13; i++) {
-      const g = (k) => parseFloat(document.getElementById(`bp_${k}_${i}`)?.value) || 0;
-      const s = (k, v) => { const el = document.getElementById(`bp_${k}_${i}`); if (el) el.textContent = Math.round(v).toLocaleString(); };
-      s('grossProfit', g('revenue') - g('cogs'));
-      s('opProfit', (g('revenue') - g('cogs')) - g('sgaExp'));
-      s('ordProfit', (g('revenue') - g('cogs') - g('sgaExp')) + g('nonOpNet'));
-      s('preTaxProfit', (g('revenue') - g('cogs') - g('sgaExp') + g('nonOpNet')) + g('specialNet'));
-      s('netProfit', (g('revenue') - g('cogs') - g('sgaExp') + g('nonOpNet') + g('specialNet')) - g('tax'));
+  recalcSummary() {
+    for (let i = 0; i < 6; i++) {
+      const g = (k) => parseFloat(document.getElementById(`sp_${k}_${i}`)?.value) || 0;
+      const s = (k, v) => { const el = document.getElementById(`sp_${k}_${i}`); if (el) el.textContent = Math.round(v).toLocaleString(); };
+      // 営業利益 = 売上高 − 売上原価 − 一般販管費
+      const op = g('revenue') - g('cogs') - g('sgaExp');
+      s('opProfit', op);
+      // 税引前損益 = 営業利益 + 営業外収益 − 営業外費用
+      const preTax = op + g('nonOpIncome') - g('nonOpExp');
+      s('preTaxProfit', preTax);
+      // 税引後損益
+      const taxRate = parseFloat(document.getElementById('bp_taxRate')?.value) / 100 || 0.35;
+      const net = preTax > 0 ? Math.round(preTax * (1 - taxRate)) : preTax;
+      s('netProfit', net);
+      // 繰越損益 = 税引後損益 − 配当
+      s('retainedProfit', net - g('dividend'));
+      // フリーCF = 営業CF + 投資CF
+      s('freeCF', g('opCF') + g('investCF'));
     }
   },
 
-  // セグメント売上計画
-  showSegmentPlan() {
-    const el = document.getElementById('bp_content');
-    if (!el) { this.showPlanEditor(); return; }
-    let html = `<div class="report-subtitle" style="font-size:13px;">📦 セグメント別売上計画（数量×単価）</div>`;
-    for (let seg = 1; seg <= 5; seg++) {
-      html += `<div style="margin-bottom:12px;padding:12px;background:rgba(108,99,255,0.04);border-radius:8px;">
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px;">
-          <div><label style="font-size:10px;color:var(--text-muted);">セグメント${seg}名称</label>
-            <input id="bp_seg${seg}_name" placeholder="セグメント名" style="width:100%;padding:4px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;"></div>
-          <div><label style="font-size:10px;color:var(--text-muted);">数量</label>
-            <input id="bp_seg${seg}_qty" type="number" value="0" style="width:100%;padding:4px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;"></div>
-          <div><label style="font-size:10px;color:var(--text-muted);">単価</label>
-            <input id="bp_seg${seg}_price" type="number" value="0" style="width:100%;padding:4px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;"></div>
-          <div><label style="font-size:10px;color:var(--text-muted);">売上高</label>
-            <div id="bp_seg${seg}_total" style="padding:6px;font-size:11px;font-weight:600;">0</div></div>
-        </div>
-      </div>`;
-    }
-    el.innerHTML = html;
+  // ========== シート2: 単体事業計画書（セグメント別詳細PL）==========
+  _renderDetailPL() {
+    const periods = ['実績1期','実績2期','実績3期','計画1年','計画2年','計画3年','計画4年','計画5年','計画6年','計画7年'];
+    // セグメント別売上（3セグメント×数量・単価・金額）
+    let html = `<div class="report-subtitle" style="font-size:13px;">📊 単体事業計画書（セグメント別詳細PL）</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">（単位：千円）</div>
+    <div style="overflow-x:auto;"><table style="width:100%;font-size:10px;border-collapse:collapse;min-width:1200px;">
+    <thead><tr style="border-bottom:2px solid var(--border-secondary);">
+      <th style="padding:4px;text-align:left;min-width:140px;"></th>
+      <th style="padding:4px;text-align:left;min-width:130px;">勘定科目</th>`;
+    periods.forEach((p, i) => {
+      const bg = i < 3 ? 'rgba(108,99,255,0.08)' : '';
+      html += `<th style="padding:3px;text-align:right;font-size:9px;min-width:70px;background:${bg};">${p}</th>`;
+    });
+    html += `<th style="padding:3px;text-align:center;font-size:9px;">ストレス</th></tr></thead><tbody>`;
+
+    // セグメント売上明細
+    const segs = [
+      { section: '売上高', items: [
+        { key:'revenue', label:'売上高合計', calc:true, bold:true }
+      ]},
+      ...['A','B','C'].map((seg,si) => ({
+        section: `セグメント${seg}`, items: [
+          { key:`seg${si}_name`, label:`●●向け`, header:true },
+          { key:`seg${si}_qty`, label:'数量' },
+          { key:`seg${si}_price`, label:'単価' },
+          { key:`seg${si}_amt`, label:'金額', calc:true }
+        ]
+      })),
+      { section: '売上原価', items: [
+        { key:'d_cogs', label:'売上原価合計', bold:true },
+        { key:'d_cogsMat', label:'　●●向け単価', stress:'1.03' },
+        { key:'d_cogsMat2', label:'　●●', stress:'' },
+        { key:'d_cogsMatP', label:'　●●向け単価', stress:'1.03' },
+        { key:'d_cogsMat2P', label:'　●●', stress:'' },
+        { key:'d_cogsMatQ', label:'　●●向け単価', stress:'1.03' },
+        { key:'d_cogsMat2Q', label:'　●●', stress:'' },
+        { key:'d_laborUnit', label:'　労務費単価', stress:'1.03' },
+        { key:'d_laborHead', label:'　人数' },
+        { key:'d_labor', label:'　労務費', bold:true },
+        { key:'d_cogsDeprec', label:'　減価償却費' },
+        { key:'d_cogsOther', label:'　その他費用', stress:'1.03' }
+      ]},
+      { section: '売上総利益', items: [
+        { key:'d_grossProfit', label:'売上総利益', calc:true, bold:true }
+      ]},
+      { section: '販売費及び一般管理費', items: [
+        { key:'d_sgaExp', label:'販管費合計', bold:true },
+        { key:'d_sgaLaborUnit', label:'　労務費単価', stress:'1.03' },
+        { key:'d_sgaLaborHead', label:'　人数' },
+        { key:'d_sgaLabor', label:'　労務費', bold:true },
+        { key:'d_sgaDeprec', label:'　減価償却費' },
+        { key:'d_sgaOther', label:'　その他費用', stress:'1.03' }
+      ]},
+      { section: 'PL下段', items: [
+        { key:'d_opProfit', label:'営業利益', calc:true, bold:true },
+        { key:'d_nonOpIncome', label:'営業外収益' },
+        { key:'d_nonOpExp', label:'営業外費用' },
+        { key:'d_interestExp', label:'　支払利息' },
+        { key:'d_ordProfit', label:'経常利益', calc:true, bold:true },
+        { key:'d_specialProfit', label:'特別利益' },
+        { key:'d_specialLoss', label:'特別損失' },
+        { key:'d_preTaxProfit', label:'税引前当期純利益', calc:true, bold:true },
+        { key:'d_tax', label:'法人税等' },
+        { key:'d_netProfit', label:'当期純利益', calc:true, bold:true }
+      ]}
+    ];
+
+    segs.forEach(seg => {
+      // セクションヘッダ
+      html += `<tr style="background:rgba(108,99,255,0.04);"><td colspan="${periods.length+3}" style="padding:4px 6px;font-weight:700;font-size:10px;color:var(--accent-cyan);">${seg.section}</td></tr>`;
+      seg.items.forEach(item => {
+        const isBold = item.bold;
+        const isCalc = item.calc;
+        html += `<tr style="border-bottom:1px solid var(--border-secondary);${isBold?'font-weight:600;':''}">
+          <td></td><td style="padding:3px 4px;font-size:10px;">${item.label}</td>`;
+        periods.forEach((p, i) => {
+          const bg = i < 3 ? 'rgba(108,99,255,0.04)' : '';
+          if (isCalc) {
+            html += `<td style="padding:3px;text-align:right;background:${bg};font-size:10px;" id="dp_${item.key}_${i}">0</td>`;
+          } else {
+            html += `<td style="padding:1px;background:${bg};"><input id="dp_${item.key}_${i}" type="number" value="0" onchange="BankAudit.recalcDetail()" style="width:100%;padding:2px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:3px;color:var(--text-primary);font-size:10px;text-align:right;"></td>`;
+          }
+        });
+        html += `<td style="padding:3px;text-align:center;font-size:9px;color:var(--accent-gold);">${item.stress||''}</td></tr>`;
+      });
+    });
+    html += `</tbody></table></div>`;
+    return html;
   },
 
-  // 固定資産・減価償却費明細
-  showFixedAssetSchedule() {
-    const el = document.getElementById('bp_content');
-    if (!el) { this.showPlanEditor(); return; }
-    const categories = ['建物','機械設備','車両運搬具','ソフトウェア','その他'];
+  recalcDetail() {
+    for (let i = 0; i < 10; i++) {
+      const g = (k) => parseFloat(document.getElementById(`dp_${k}_${i}`)?.value) || 0;
+      const s = (k, v) => { const el = document.getElementById(`dp_${k}_${i}`); if (el) el.textContent = Math.round(v).toLocaleString(); };
+      // セグメント金額 = 数量 × 単価
+      for (let si = 0; si < 3; si++) s(`seg${si}_amt`, g(`seg${si}_qty`) * g(`seg${si}_price`));
+      // 売上高 = 全セグメント合計
+      const rev = [0,1,2].reduce((s, si) => s + g(`seg${si}_qty`) * g(`seg${si}_price`), 0);
+      s('revenue', rev);
+      // 売上総利益 = 売上高 − 売上原価
+      s('d_grossProfit', rev - g('d_cogs'));
+      // 営業利益 = 売上総利益 − 販管費
+      const op = rev - g('d_cogs') - g('d_sgaExp');
+      s('d_opProfit', op);
+      // 経常利益 = 営業利益 + 営業外収益 − 営業外費用
+      const ord = op + g('d_nonOpIncome') - g('d_nonOpExp');
+      s('d_ordProfit', ord);
+      // 税前 = 経常 + 特利 − 特損
+      const preTax = ord + g('d_specialProfit') - g('d_specialLoss');
+      s('d_preTaxProfit', preTax);
+      // 純利益 = 税前 − 法人税
+      s('d_netProfit', preTax - g('d_tax'));
+    }
+  },
+
+  // ========== シート3: 連結事業計画書 ==========
+  _renderConsolidatedPlan() {
     const cols = ['実績1期','実績2期','計画1年','計画2年','計画3年','計画4年','計画5年'];
-    let html = `<div class="report-subtitle" style="font-size:13px;">🏭 固定資産・減価償却費明細</div>
+    const rows = [
+      {key:'c_revenue',label:'売上高'}, {key:'c_cogs',label:'売上原価'},
+      {key:'c_grossProfit',label:'売上総利益',calc:true,bold:true},
+      {key:'c_sgaExp',label:'販管費'}, {key:'c_opProfit',label:'営業利益',calc:true,bold:true},
+      {key:'c_nonOpIncome',label:'営業外収益'}, {key:'c_nonOpExp',label:'営業外費用'},
+      {key:'c_ordProfit',label:'経常利益',calc:true,bold:true},
+      {key:'c_preTax',label:'税引前損益',calc:true}, {key:'c_netProfit',label:'当期純利益',calc:true,bold:true}
+    ];
+
+    let html = `<div class="report-subtitle" style="font-size:13px;">🔗 連結事業計画書</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">（単位：千円）　※ シナジー効果は計上しない。少額子会社はゼロ処理。</div>
     <div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;">
-    <thead><tr style="border-bottom:2px solid var(--border-secondary);">
-      <th style="padding:4px 6px;text-align:left;">資産区分</th>
-      ${cols.map(c => `<th style="padding:4px 6px;text-align:right;font-size:10px;">${c}</th>`).join('')}
-    </tr></thead><tbody>`;
-    // 取得価額セクション
-    html += `<tr style="background:rgba(108,99,255,0.06);"><td colspan="${cols.length+1}" style="padding:6px;font-weight:700;font-size:11px;">取得価額</td></tr>`;
-    categories.forEach(cat => {
-      html += `<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:4px 6px;">${cat}</td>`;
-      cols.forEach((c,i) => { html += `<td style="padding:2px;"><input id="fa_acq_${cat}_${i}" type="number" value="0" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`; });
+    <thead><tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:4px;text-align:left;min-width:130px;">勘定科目</th>`;
+    cols.forEach((c,i) => {
+      html += `<th style="padding:4px;text-align:right;font-size:10px;${i<2?'background:rgba(108,99,255,0.08);':''}">${c}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    rows.forEach(row => {
+      html += `<tr style="border-bottom:1px solid var(--border-secondary);${row.bold?'font-weight:700;':''}">
+        <td style="padding:4px 6px;">${row.label}</td>`;
+      cols.forEach((c,i) => {
+        const bg = i < 2 ? 'rgba(108,99,255,0.04)' : '';
+        if (row.calc) {
+          html += `<td style="padding:4px;text-align:right;background:${bg};" id="cp_${row.key}_${i}">0</td>`;
+        } else {
+          html += `<td style="padding:1px;background:${bg};"><input id="cp_${row.key}_${i}" type="number" value="0" onchange="BankAudit.recalcConsolidated()" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`;
+        }
+      });
       html += `</tr>`;
     });
-    html += `<tr style="font-weight:700;border-bottom:2px solid var(--border-secondary);"><td style="padding:4px 6px;">固定資産合計</td>`;
-    cols.forEach((c,i) => { html += `<td style="padding:4px 6px;text-align:right;" id="fa_acq_total_${i}">0</td>`; });
-    html += `</tr>`;
-    // 減価償却費セクション
-    html += `<tr style="background:rgba(255,193,7,0.06);"><td colspan="${cols.length+1}" style="padding:6px;font-weight:700;font-size:11px;">減価償却費</td></tr>`;
-    categories.forEach(cat => {
-      html += `<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:4px 6px;">${cat}減価償却費</td>`;
-      cols.forEach((c,i) => { html += `<td style="padding:2px;"><input id="fa_dep_${cat}_${i}" type="number" value="0" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`; });
-      html += `</tr>`;
-    });
-    html += `<tr style="font-weight:700;"><td style="padding:4px 6px;">減価償却費合計</td>`;
-    cols.forEach((c,i) => { html += `<td style="padding:4px 6px;text-align:right;" id="fa_dep_total_${i}">0</td>`; });
-    html += `</tr></tbody></table></div>`;
-    el.innerHTML = html;
+    html += `</tbody></table></div>`;
+    return html;
   },
 
-  // 有利子負債明細
-  showDebtSchedule() {
-    const el = document.getElementById('bp_content');
-    if (!el) { this.showPlanEditor(); return; }
+  recalcConsolidated() {
+    for (let i = 0; i < 7; i++) {
+      const g = k => parseFloat(document.getElementById(`cp_${k}_${i}`)?.value) || 0;
+      const s = (k, v) => { const el = document.getElementById(`cp_${k}_${i}`); if (el) el.textContent = Math.round(v).toLocaleString(); };
+      s('c_grossProfit', g('c_revenue') - g('c_cogs'));
+      const op = g('c_revenue') - g('c_cogs') - g('c_sgaExp');
+      s('c_opProfit', op);
+      s('c_ordProfit', op + g('c_nonOpIncome') - g('c_nonOpExp'));
+      s('c_preTax', op + g('c_nonOpIncome') - g('c_nonOpExp'));
+      const taxRate = parseFloat(document.getElementById('bp_taxRate')?.value) / 100 || 0.35;
+      const pt = op + g('c_nonOpIncome') - g('c_nonOpExp');
+      s('c_netProfit', pt > 0 ? Math.round(pt * (1 - taxRate)) : pt);
+    }
+  },
+
+  // ========== シート5: 固定資産・減価償却費（CAPEX/償却スケジュール）==========
+  _renderAssetSchedule() {
+    const cols = ['実績1期','実績2期','計画1年','計画2年','計画3年','計画4年'];
+    const cats = ['建物','機械設備','車両運搬具','有形固定資産計','ソフトウェア','その他','無形固定資産計','固定資産合計'];
+    const isSub = ['有形固定資産計','無形固定資産計','固定資産合計'];
+
+    let html = `<div class="report-subtitle" style="font-size:13px;">🏭 固定資産／減価償却費</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">（単位：千円）</div>
+    <div style="overflow-x:auto;">`;
+
+    // 設備投資セクション
+    ['設備投資（取得価額）', '減価償却費'].forEach((sectionLabel, si) => {
+      const prefix = si === 0 ? 'fa_acq' : 'fa_dep';
+      html += `<div class="report-subtitle" style="font-size:11px;color:var(--accent-cyan);margin-top:12px;">${sectionLabel}</div>
+      <table style="width:100%;font-size:11px;border-collapse:collapse;">
+      <thead><tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:4px;text-align:left;min-width:130px;">勘定科目</th>`;
+      cols.forEach((c,i) => {
+        html += `<th style="padding:4px;text-align:right;font-size:10px;${i<2?'background:rgba(108,99,255,0.08);':''}">${c}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+      cats.forEach(cat => {
+        const isTotal = isSub.includes(cat);
+        html += `<tr style="border-bottom:1px solid var(--border-secondary);${isTotal?'font-weight:700;background:rgba(255,255,255,0.02);':''}">
+          <td style="padding:4px 6px;">${cat}</td>`;
+        cols.forEach((c,i) => {
+          const bg = i < 2 ? 'rgba(108,99,255,0.04)' : '';
+          const id = `${prefix}_${cat.replace(/[・／]/g,'_')}_${i}`;
+          html += `<td style="padding:2px;background:${bg};"><input id="${id}" type="number" value="0" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table>`;
+    });
+    html += `</div>`;
+    return html;
+  },
+
+  // ========== シート6: 有利子負債（調達・返済・残高）==========
+  _renderDebtSchedule() {
+    const cols = ['実績1期','実績2期','計画1年','計画2年','計画3年','計画4年'];
     const debtTypes = ['短期借入金','長期借入金','社債'];
-    const cols = ['実績1期','計画1年','計画2年','計画3年','計画4年','計画5年'];
-    let html = `<div class="report-subtitle" style="font-size:13px;">💳 有利子負債明細</div>
-    <div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;">
-    <thead><tr style="border-bottom:2px solid var(--border-secondary);">
-      <th style="padding:4px 6px;text-align:left;">勘定科目</th>
-      ${cols.map(c => `<th style="padding:4px 6px;text-align:right;font-size:10px;">${c}</th>`).join('')}
-    </tr></thead><tbody>`;
-    // 調達(IN)
-    html += `<tr style="background:rgba(76,175,80,0.06);"><td colspan="${cols.length+1}" style="padding:6px;font-weight:700;font-size:11px;">財務CF・IN（調達）</td></tr>`;
-    debtTypes.forEach(dt => {
-      html += `<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:4px 6px;">${dt}</td>`;
-      cols.forEach((c,i) => { html += `<td style="padding:2px;"><input type="number" value="0" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`; });
-      html += `</tr>`;
+
+    let html = `<div class="report-subtitle" style="font-size:13px;">💳 有利子負債</div>
+    <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">（単位：千円）</div>
+    <div style="overflow-x:auto;">`;
+
+    // 3セクション: 調達(IN) / 返済(OUT) / 残高
+    [
+      { label: '財務CF・IN（調達）', prefix: 'debt_in', color: 'rgba(76,175,80,0.06)' },
+      { label: '財務CF・OUT（返済）', prefix: 'debt_out', color: 'rgba(244,67,54,0.06)' },
+      { label: '有利子負債残高', prefix: 'debt_bal', color: 'rgba(108,99,255,0.06)' }
+    ].forEach(sec => {
+      html += `<div class="report-subtitle" style="font-size:11px;color:var(--accent-cyan);margin-top:12px;">${sec.label}</div>
+      <table style="width:100%;font-size:11px;border-collapse:collapse;">
+      <thead><tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:4px;text-align:left;min-width:130px;">勘定科目</th>`;
+      cols.forEach((c,i) => {
+        html += `<th style="padding:4px;text-align:right;font-size:10px;${i<2?'background:rgba(108,99,255,0.08);':''}">${c}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+      debtTypes.forEach(dt => {
+        html += `<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:4px 6px;">${dt}</td>`;
+        cols.forEach((c,i) => {
+          const bg = i < 2 ? 'rgba(108,99,255,0.04)' : '';
+          html += `<td style="padding:2px;background:${bg};"><input id="${sec.prefix}_${dt}_${i}" type="number" value="0" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`;
+        });
+        html += `</tr>`;
+      });
+      // 合計行
+      html += `<tr style="font-weight:700;border-bottom:2px solid var(--border-secondary);background:${sec.color};">
+        <td style="padding:4px 6px;">${sec.label}合計</td>`;
+      cols.forEach((c,i) => { html += `<td style="padding:4px;text-align:right;" id="${sec.prefix}_total_${i}">0</td>`; });
+      html += `</tr></tbody></table>`;
     });
-    html += `<tr style="font-weight:700;border-bottom:2px solid var(--border-secondary);"><td>有利子負債調達合計</td>`;
-    cols.forEach(() => { html += `<td style="padding:4px 6px;text-align:right;">0</td>`; });
-    html += `</tr>`;
-    // 返済(OUT)
-    html += `<tr style="background:rgba(244,67,54,0.06);"><td colspan="${cols.length+1}" style="padding:6px;font-weight:700;font-size:11px;">財務CF・OUT（返済）</td></tr>`;
-    debtTypes.forEach(dt => {
-      html += `<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:4px 6px;">${dt}</td>`;
-      cols.forEach((c,i) => { html += `<td style="padding:2px;"><input type="number" value="0" style="width:100%;padding:3px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:11px;text-align:right;"></td>`; });
-      html += `</tr>`;
-    });
-    html += `<tr style="font-weight:700;border-bottom:2px solid var(--border-secondary);"><td>有利子負債返済合計</td>`;
-    cols.forEach(() => { html += `<td style="padding:4px 6px;text-align:right;">0</td>`; });
-    html += `</tr>`;
-    // 残高
-    html += `<tr style="font-weight:700;background:rgba(108,99,255,0.06);"><td>有利子負債残高合計</td>`;
-    cols.forEach(() => { html += `<td style="padding:4px 6px;text-align:right;">0</td>`; });
-    html += `</tr></tbody></table></div>`;
-    el.innerHTML = html;
+    html += `</div>`;
+    return html;
+  },
+
+  // 事業計画Excel出力
+  exportPlanExcel() {
+    if (typeof XLSX === 'undefined') {
+      App.addSystemMessage(Utils.createAlert('error', '❌', 'SheetJSが読み込まれていません。'));
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+    const company = document.getElementById('bp_company')?.value || '企業名';
+
+    // シート1: 提出用サマリ
+    const summaryRows = [
+      [`株式会社${company}　事業計画書`],
+      [], ['', '', '', '（単位：千円）'],
+      ['', '項目', '決算期(実績)', '●期', '●期', '●期', '●期', '●期'],
+      [], ['', '売上高'], ['', '売上原価'], ['', '　(うち原材料費)'], ['', '　(うち労務費)'], ['', '　(うち減価償却費)'],
+      ['', '一般販管費'], ['', '　(うち減価償却費)'], ['', '営業利益'],
+      ['', '営業外収益'], ['', '営業外費用'], ['', '　(うち支払利息)'],
+      ['', '税引前損益'], ['', '税引後損益'], ['', '配当'], ['', '繰越損益'],
+      [], ['', '営業CF'], ['', '投資CF'], ['', 'フリーCF'], ['', '財務CF'],
+      ['', '代表者借入金増減'], ['', '借入金増減'], ['', '　(今次借入分)'], ['', '期末現預金残高']
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    wsSummary['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, '事業計画書（提出用）');
+
+    // シート2: 単体
+    const wsDetail = XLSX.utils.aoa_to_sheet([
+      [`株式会社${company}　事業計画書`], [], ['', '', '', '（単位：千円）'],
+      ['', '', '勘定科目', '実績1期', '実績2期', '実績3期', '計画1年', '計画2年', '計画3年', '計画4年', '計画5年', 'ストレス']
+    ]);
+    wsDetail['!cols'] = [{ wch: 4 }, { wch: 4 }, { wch: 20 }, ...Array(8).fill({ wch: 12 }), { wch: 8 }];
+    XLSX.utils.book_append_sheet(wb, wsDetail, '単体事業計画書');
+
+    // シート5: 固定資産
+    const assetRows = [
+      ['固定資産／減価償却費'], [], ['', '', '（単位：千円）'],
+      ['', '勘定科目', '実績1期', '実績2期', '計画1年', '計画2年', '計画3年', '計画4年'],
+      ['設備投資（取得価額）'],
+      ['', '建物'], ['', '機械設備'], ['', '車両運搬具'], ['', '有形固定資産計'],
+      ['', 'ソフトウェア'], ['', 'その他'], ['', '無形固定資産計'], ['', '固定資産合計'],
+      [], ['減価償却費'],
+      ['', '建物'], ['', '機械設備'], ['', '車両運搬具'], ['', '有形固定資産計'],
+      ['', 'ソフトウェア'], ['', 'その他'], ['', '無形固定資産計'], ['', '減価償却費合計']
+    ];
+    const wsAssets = XLSX.utils.aoa_to_sheet(assetRows);
+    wsAssets['!cols'] = [{ wch: 4 }, { wch: 20 }, ...Array(6).fill({ wch: 12 })];
+    XLSX.utils.book_append_sheet(wb, wsAssets, '固定資産・減価償却費');
+
+    // シート6: 有利子負債
+    const debtRows = [
+      ['有利子負債'], [], ['', '', '（単位：千円）'],
+      ['', '勘定科目', '実績1期', '実績2期', '計画1年', '計画2年', '計画3年', '計画4年'],
+      ['財務CF・IN（調達）'],
+      ['', '短期借入金'], ['', '長期借入金'], ['', '社債'], ['', '有利子負債調達合計'],
+      [], ['財務CF・OUT（返済）'],
+      ['', '短期借入金'], ['', '長期借入金'], ['', '社債'], ['', '有利子負債返済合計'],
+      [], ['有利子負債残高'],
+      ['', '短期借入金'], ['', '長期借入金'], ['', '社債'], ['', '有利子負債残高合計']
+    ];
+    const wsDebt = XLSX.utils.aoa_to_sheet(debtRows);
+    wsDebt['!cols'] = [{ wch: 4 }, { wch: 20 }, ...Array(6).fill({ wch: 12 })];
+    XLSX.utils.book_append_sheet(wb, wsDebt, '有利子負債');
+
+    XLSX.writeFile(wb, `事業計画書_${company}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    App.addSystemMessage(Utils.createAlert('success', '📥', '事業計画Excelを出力しました。'));
   },
 
   // 計画保存
@@ -213,28 +463,19 @@ Object.assign(BankAudit, {
     const stress = parseFloat(document.getElementById('bp_stress')?.value) || 1.03;
     const taxRate = parseFloat(document.getElementById('bp_taxRate')?.value) / 100 || 0.35;
     BankAudit.taxRate = taxRate;
-    // PL計画データ収集
-    const plData = {};
-    for (let i = 0; i < 13; i++) {
-      const keys = ['revenue','cogs','cogsLabor','cogsDeprec','cogsOther','sgaExp','sgaLabor','sgaDeprec','sgaOther','nonOpNet','specialNet','tax'];
-      const row = {};
-      keys.forEach(k => { row[k] = parseFloat(document.getElementById(`bp_${k}_${i}`)?.value) || 0; });
-      plData[i] = row;
-    }
     try {
       const r = await ApiClient.request('/api/financial/plans', {
         method: 'POST',
         body: JSON.stringify({
           version_name: version, company_name: company,
           stress_factor: stress, corporate_tax_rate: taxRate,
-          pl_plan: plData
+          pl_plan: { note: '提出用フォーマット準拠' }
         })
       });
       BankAudit.currentPlanId = r.id;
       App.addSystemMessage(Utils.createAlert('success', '✅', `事業計画「${version}」を保存しました。(ID: ${r.id})`));
     } catch(e) {
-      // ローカル保存フォールバック
-      Database.save('business_plan_' + Date.now(), { version, company, stress, taxRate, plData });
+      Database.save('business_plan_' + Date.now(), { version, company, stress, taxRate });
       App.addSystemMessage(Utils.createAlert('success', '✅', `事業計画「${version}」をローカルに保存しました。`));
     }
   },
@@ -244,7 +485,7 @@ Object.assign(BankAudit, {
     if (!BankAudit.currentPlanId) { App.addSystemMessage(Utils.createAlert('warning','⚠️','先に計画を保存してください。')); return; }
     try {
       await ApiClient.request(`/api/financial/plans/${BankAudit.currentPlanId}/lock`, { method: 'POST' });
-      App.addSystemMessage(Utils.createAlert('success', '🔒', 'バージョンをロックしました。以降の編集はできません。修正時は新バージョンとして保存してください。'));
+      App.addSystemMessage(Utils.createAlert('success', '🔒', 'バージョンをロックしました。'));
     } catch(e) { App.addSystemMessage(Utils.createAlert('error','❌','ロックに失敗: ' + e.message)); }
   },
 
@@ -274,12 +515,11 @@ Object.assign(BankAudit, {
       });
       html += `</table>`;
     }
-    html += `<div style="margin-top:16px;"><button class="btn btn-primary btn-sm" onclick="BankAudit.showPlanEditor()">📈 新規計画作成</button></div>
-    </div>`;
+    html += `<div style="margin-top:16px;"><button class="btn btn-primary btn-sm" onclick="BankAudit.showPlanEditor()">📈 新規計画作成</button></div></div>`;
     App.addSystemMessage(html);
   },
 
-  // 計画vs実績 乖離分析
+  // 乖離分析
   showVarianceAnalysis() {
     const dna = Database.loadCompanyData() || {};
     let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
