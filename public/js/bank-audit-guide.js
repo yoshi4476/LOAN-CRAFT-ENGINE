@@ -466,12 +466,12 @@ Object.assign(BankAudit, {
 // ========== ③ Excel読込→DNA自動反映 ==========
 Object.assign(BankAudit, {
 
-  // DNA用Excel読込（読込後に自動的にDNA反映）
+  // DNA用Excel/PDF読込（読込後に自動的にDNA反映）
   showExcelImportForDNA() {
     let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
-      <div class="report-title">📁 決算書Excel読込 → DNA自動登録</div>
+      <div class="report-title">📁 決算書読込 (Excel / PDF) → DNA自動登録</div>
       <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
-        決算書をアップロードすると、財務データを自動的に企業DNAに反映します。
+        決算書（ExcelまたはPDF）をアップロードすると、AIが財務データを自動抽出し企業DNAに反映します。
       </p>
       <div style="border:2px dashed var(--accent-primary);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all 0.3s;background:rgba(108,99,255,0.03);"
         ondragover="event.preventDefault();this.style.borderColor='var(--accent-green)';this.style.background='rgba(76,175,80,0.06)'"
@@ -479,17 +479,87 @@ Object.assign(BankAudit, {
         ondrop="event.preventDefault();BankAudit.handleExcelForDNA(event.dataTransfer.files[0])"
         onclick="document.getElementById('dna_excel_file').click()">
         <div style="font-size:40px;margin-bottom:8px;">📊</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">決算書Excelをここにドロップ</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">決算書ファイルをここにドロップ</div>
         <div style="font-size:12px;color:var(--text-muted);">またはクリックしてファイルを選択</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:8px;">.xlsx / .xls / .csv 対応</div>
-        <input type="file" id="dna_excel_file" accept=".xlsx,.xls,.csv" style="display:none" onchange="BankAudit.handleExcelForDNA(this.files[0])">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:8px;">.xlsx / .xls / .csv / .pdf 対応</div>
+        <input type="file" id="dna_excel_file" accept=".xlsx,.xls,.csv,.pdf" style="display:none" onchange="BankAudit.handleExcelForDNA(this.files[0])">
       </div>
     </div>`;
     App.addSystemMessage(html);
   },
 
-  handleExcelForDNA(file) {
+  async handleExcelForDNA(file) {
     if (!file) return;
+
+    // PDFの場合はAI解析エンドポイントへ送信
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      App.addSystemMessage(Utils.createAlert('info','⏳','PDFをAIコンサルタントが解析して数値を抽出しています。数秒〜十数秒お待ちください...'));
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        const res = await fetch((window.LCE_API_BASE||'') + '/api/ai/parse-pdf', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + App.token },
+          body: fd
+        });
+        const parsed = await res.json();
+        if (parsed.error) throw new Error(parsed.error);
+
+        const dna = Database.loadCompanyData() || {};
+        if (parsed.revenue) dna.annualRevenue = parsed.revenue;
+        if (parsed.opProfit) dna.operatingProfit = parsed.opProfit;
+        if (parsed.ordProfit) dna.ordinaryProfit = parsed.ordProfit;
+        if (parsed.netProfit) dna.netIncome = parsed.netProfit;
+        if (parsed.totalAssets) dna.totalAssets = parsed.totalAssets;
+        if (parsed.netAssets) dna.netAssets = parsed.netAssets;
+        if (parsed.deprecTotal) dna.depreciation = parsed.deprecTotal;
+        if (parsed.interestExp) dna.interestExpense = parsed.interestExp;
+        if (parsed.cash) dna.cashDeposits = parsed.cash;
+        if (parsed.inventory) dna.inventory = parsed.inventory;
+        if (parsed.accountsRec) dna.receivables = parsed.accountsRec;
+        if (parsed.accountsPay) dna.payables = parsed.accountsPay;
+        if (parsed.currentAssets) dna.currentAssets = parsed.currentAssets;
+        if (parsed.fixedAssets) dna.fixedAssets = parsed.fixedAssets;
+        if (parsed.currentLiab) dna.currentLiabilities = parsed.currentLiab;
+        if (parsed.capital) dna.capitalAmount = Math.round(parsed.capital / 10000);
+        
+        const ibd = (parsed.shortDebt||0) + (parsed.longDebt||0) + (parsed.bonds||0);
+        if (ibd > 0) dna.totalDebt = ibd;
+
+        this.currentFS = { ...parsed };
+        Database.saveCompanyData(dna);
+
+        const items = [
+          ['売上高', dna.annualRevenue], ['経常利益', dna.ordinaryProfit],
+          ['総資産', dna.totalAssets], ['純資産', dna.netAssets],
+          ['現預金', dna.cashDeposits], ['売掛金', dna.receivables],
+          ['有利子負債', dna.totalDebt], ['棚卸資産', dna.inventory]
+        ].filter(([,v]) => v != null);
+
+        let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+          <div class="report-title">✅ PDFのAI読込・DNA反映が完了しました</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">抽出された主な財務データ:</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px;">`;
+        items.forEach(([label, value]) => {
+          html += `<div style="padding:8px;background:rgba(76,175,80,0.06);border-radius:6px;text-align:center;">
+            <div style="font-size:9px;color:var(--text-muted);">${label}</div>
+            <div style="font-size:12px;font-weight:700;">${Number(value).toLocaleString()}</div>
+          </div>`;
+        });
+        html += `</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="CompanyDNA._proceedManualDNA()">🧬 DNA補完入力へ</button>
+            <button class="btn btn-secondary" onclick="BankAudit.showCaseJudgment()">🏦 格付判定へ</button>
+          </div>
+        </div>`;
+        App.addSystemMessage(html);
+        return;
+      } catch (err) {
+        App.addSystemMessage(Utils.createAlert('error','❌','PDF解析失敗: ' + err.message));
+        return;
+      }
+    }
+
     if (typeof XLSX === 'undefined') {
       App.addSystemMessage(Utils.createAlert('error','❌','SheetJSが未読込です。'));
       return;
