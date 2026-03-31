@@ -57,6 +57,7 @@ const App = {
     { cmd: '/AI決算', label: '/AI決算', desc: '📊 AI決算書分析レポート', fn: () => FinancialAnalysis.aiAnalyzeFinancials() },
     { cmd: '/AI交渉', label: '/AI交渉', desc: '💰 AI金利交渉戦略', fn: () => Strategy.aiNegotiationStrategy() },
     { cmd: '/AI整合', label: '/AI整合', desc: '✅ AI整合性チェック', fn: () => Extra.aiConsistencyCheck() },
+    { cmd: '/業種モード', label: '/業種モード', desc: '🏢 業種特化モード切替', fn: () => BankAudit.showIndustryModeSelector() },
     { cmd: '/help', label: '/help', desc: 'コマンド一覧表示', fn: () => App.showHelp() },
     { cmd: '/クリア', label: '/クリア', desc: 'データを初期化', fn: () => App.confirmClear() },
     { cmd: '/決算取込', label: '/決算取込', desc: '📊 決算書OCR取込・財務反映', fn: () => BankAudit.showOCRImport() },

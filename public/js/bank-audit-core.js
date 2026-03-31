@@ -436,7 +436,8 @@ const BankAudit = {
     const ebitda = (fs.opProfit||0) + (fs.deprecTotal||0);
     const rec = (fs.notesRec||0) + (fs.accountsRec||0);
     const pay = (fs.notesPay||0) + (fs.accountsPay||0);
-    const nwc = rec + (fs.inventory||0) - pay; // 正常運転資金
+    const inv = (fs.inventory||0);
+    const nwc = rec + inv - pay; // 正常運転資金
     const monthly = fs.revenue / 12;
     const list = [];
     const judge = (val, thresholds, labels, colors) => {
@@ -451,17 +452,27 @@ const BankAudit = {
       manufacturing: { recM: 2.5, invM: 2.0, payM: 2.0, debtM: 6 },
       wholesale:     { recM: 2.0, invM: 1.0, payM: 1.5, debtM: 4 },
       service:       { recM: 1.5, invM: 0.5, payM: 1.0, debtM: 3 },
+      realestate:    { recM: 1.0, invM: 5.0, payM: 1.0, debtM: 20 },
+      it:            { recM: 2.0, invM: 0.1, payM: 1.0, debtM: 3 },
+      medical:       { recM: 2.0, invM: 0.5, payM: 1.5, debtM: 5 },
+      startup:       { recM: 1.5, invM: 0.5, payM: 1.5, debtM: 4 },
       construction:  { recM: 3.0, invM: 2.0, payM: 2.5, debtM: 6 },
       retail:        { recM: 0.5, invM: 1.5, payM: 1.0, debtM: 3 },
       other:         { recM: 2.0, invM: 1.5, payM: 1.5, debtM: 5 }
     }[this.industry] || { recM: 2.0, invM: 1.5, payM: 1.5, debtM: 5 };
 
+    // ★ 業種別 見る年数の違い（償還年数の基準）
+    let repayTarget = { normal: 10, caution: 20 };
+    if (this.industry === 'realestate') repayTarget = { normal: 20, caution: 30 };
+    if (this.industry === 'it') repayTarget = { normal: 7, caution: 15 };
+    if (this.industry === 'medical') repayTarget = { normal: 15, caution: 20 };
+
     // ★ 有利子負債償還年数 = 有利子負債 ÷ 簡易営業CF
     const repayYears = opCF > 0 ? (ibd / opCF) : -1;
     const repayStr = repayYears < 0 ? '算定不能（CF赤字）' : repayYears.toFixed(1) + '年';
-    const repayColor = repayYears < 0 ? 'var(--accent-red)' : repayYears <= 10 ? 'var(--accent-green)' : repayYears <= 20 ? 'var(--accent-gold)' : 'var(--accent-red)';
+    const repayColor = repayYears < 0 ? 'var(--accent-red)' : repayYears <= repayTarget.normal ? 'var(--accent-green)' : repayYears <= repayTarget.caution ? 'var(--accent-gold)' : 'var(--accent-red)';
     const rj = repayYears < 0 ? {verdict:'⛔ 破綻懸念先以下（CF赤字）',color:'var(--accent-red)'} :
-               judge(repayYears, [10,20,999], ['✅ 正常（10年以内）','⚠️ 要注意（10〜20年）','⛔ 要管理以下（20年超）'], ['var(--accent-green)','var(--accent-gold)','var(--accent-red)']);
+               judge(repayYears, [repayTarget.normal, repayTarget.caution, 999], [`✅ 正常（${repayTarget.normal}年以内）`,`⚠️ 要注意（${repayTarget.normal}〜${repayTarget.caution}年）`,`⛔ 要管理以下（${repayTarget.caution}年超）`], ['var(--accent-green)','var(--accent-gold)','var(--accent-red)']);
     list.push({ label: '★ 有利子負債償還年数', value: repayStr, ...rj });
 
     // ★ 要収益弁済借入金償還年数 = (有利子負債 − 正常運転資金) ÷ 簡易営業CF
@@ -469,20 +480,32 @@ const BankAudit = {
     const reqRepayYears = opCF > 0 ? (reqRepayAmt / opCF) : -1;
     const reqRepayStr = reqRepayYears < 0 ? '算定不能（CF赤字）' : reqRepayYears.toFixed(1) + '年';
     const rj2 = reqRepayYears < 0 ? {verdict:'⛔ 破綻懸念先以下',color:'var(--accent-red)'} :
-               judge(reqRepayYears, [10,20,999], ['✅ 正常（10年以内）','⚠️ 要注意（10〜20年）','⛔ 要管理以下'],['var(--accent-green)','var(--accent-gold)','var(--accent-red)']);
+               judge(reqRepayYears, [repayTarget.normal, repayTarget.caution, 999], [`✅ 正常（${repayTarget.normal}年以内）`,`⚠️ 要注意（${repayTarget.normal}〜${repayTarget.caution}年）`,`⛔ 要管理以下`],['var(--accent-green)','var(--accent-gold)','var(--accent-red)']);
     list.push({ label: '★ 要収益弁済借入金償還年数', value: reqRepayStr, ...rj2 });
 
     // ★ EBITDA倍率 = 有利子負債 ÷ EBITDA
+    let ebitdaTarget = [5, 10, 15, 999];
+    if (this.industry === 'it') ebitdaTarget = [3, 7, 10, 999];
+    if (this.industry === 'realestate' || this.industry === 'medical') ebitdaTarget = [10, 15, 20, 999];
+
     const ebitdaMultiple = ebitda > 0 ? (ibd / ebitda) : -1;
     const ebitdaStr = ebitdaMultiple < 0 ? '算定不能' : ebitdaMultiple.toFixed(1) + '倍';
     list.push({ label: '★ EBITDA倍率（有利子負債÷EBITDA）', value: ebitdaStr,
       ...(ebitdaMultiple < 0 ? {verdict:'⛔ EBITDA赤字',color:'var(--accent-red)'} :
-         judge(ebitdaMultiple, [5,10,15,999], ['✅ 良好','普通','⚠️ 注意','⛔ 危険'], ['var(--accent-green)','var(--text-secondary)','var(--accent-gold)','var(--accent-red)'])) });
+         judge(ebitdaMultiple, ebitdaTarget, ['✅ 良好','普通','⚠️ 注意','⛔ 危険'], ['var(--accent-green)','var(--text-secondary)','var(--accent-gold)','var(--accent-red)'])) });
 
     // ★ 固定資産＋繰延資産−純資産（実質債務超過判定）
-    const realDebt = (fs.fixedAssets||0) + (fs.deferredAssets||0) - (fs.netAssets||0);
+    let realDebt = (fs.fixedAssets||0) + (fs.deferredAssets||0) - (fs.netAssets||0);
+    let rdVerdict = realDebt > 0 ? '⚠️ 固定資産を自己資本で賄えていない' : '✅ 良好';
+    let rdColor = realDebt > 0 ? 'var(--accent-red)' : 'var(--accent-green)';
+    
+    if (this.industry === 'startup') {
+      rdVerdict = realDebt > 0 ? '⚠️ 債務超過（スタートアップ特例: CFランウェイ重視）' : '✅ 良好';
+      rdColor = realDebt > 0 ? 'var(--accent-gold)' : 'var(--accent-green)'; // スタートアップは赤字先行を許容
+    }
+
     list.push({ label: '★ 固定資産+繰延資産−純資産', value: realDebt > 0 ? '超過 ' + realDebt.toLocaleString() : '− ' + Math.abs(realDebt).toLocaleString() + '（余裕）',
-      verdict: realDebt > 0 ? '⚠️ 固定資産を自己資本で賄えていない' : '✅ 良好', color: realDebt > 0 ? 'var(--accent-red)' : 'var(--accent-green)' });
+      verdict: rdVerdict, color: rdColor });
 
     // 売上高営業利益率
     const opMargin = fs.revenue > 0 ? ((fs.opProfit / fs.revenue) * 100).toFixed(1) + '%' : '—';
@@ -556,13 +579,22 @@ const BankAudit = {
 
   _determineCategory(indicators, simpleCF) {
     const ry = indicators.opCF > 0 ? indicators.ibd / indicators.opCF : -1;
+    
+    // 業種別の正常先基準年数
+    let repayTarget = { normal: 10, caution: 20 };
+    if (this.industry === 'realestate') repayTarget = { normal: 20, caution: 30 };
+    if (this.industry === 'it') repayTarget = { normal: 7, caution: 15 };
+    if (this.industry === 'medical') repayTarget = { normal: 15, caution: 20 };
+
     if (ry < 0 || simpleCF.value < 0) return { label: '破綻懸念先', code: 4, color: 'var(--accent-red)' };
-    // 実質債務超過なら最低でも要注意先
+    
     const realDebt = indicators.list.find(x => x.label.includes('固定資産'));
     const hasExcess = realDebt && realDebt.value.includes('超過');
-    if (ry <= 10 && !hasExcess) return { label: '正常先', code: 1, color: 'var(--accent-green)' };
-    if (ry <= 10 && hasExcess) return { label: '要注意先（実質債務超過あり）', code: 2, color: 'var(--accent-gold)' };
-    if (ry <= 20) return { label: '要注意先', code: 2, color: 'var(--accent-gold)' };
+    const isStartup = this.industry === 'startup';
+
+    if (ry <= repayTarget.normal && (!hasExcess || isStartup)) return { label: '正常先', code: 1, color: 'var(--accent-green)' };
+    if (ry <= repayTarget.normal && hasExcess) return { label: '要注意先（実質債務超過あり）', code: 2, color: 'var(--accent-gold)' };
+    if (ry <= repayTarget.caution) return { label: '要注意先', code: 2, color: 'var(--accent-gold)' };
     return { label: '要管理先以下', code: 3, color: 'var(--accent-red)' };
   },
 
@@ -579,6 +611,50 @@ const BankAudit = {
         })
       });
     } catch(e) { console.warn('格付保存スキップ:', e.message); }
+  },
+
+  // ===== 業種別特化モード =====
+  showIndustryModeSelector() {
+    let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
+      <div class="report-title">🏢 業種特化モードの選択</div>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+        業種によって銀行の「審査年数」「計上方法」「重視指標」が異なります。<br>
+        実態に合わせた業種モードを選択してください。
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">`;
+
+    const modes = [
+      { id: 'manufacturing', icon: '🏭', name: '製造・卸・一般業', desc: '標準的な審査。運転資金の回転期間や設備投資バランスを重視。', years: 10 },
+      { id: 'realestate', icon: '🏢', name: '不動産賃貸・管理業', desc: '建物の耐用年数が長いため、償還年数は20〜30年を許容。EBITDA倍率を重視。', years: 20 },
+      { id: 'construction', icon: '🚧', name: '建設業', desc: '未成工事支出金などを運転資金とみなす。売掛回転期間の長期化も許容。', years: 10 },
+      { id: 'it', icon: '💻', name: 'IT・SaaS・サービス業', desc: '有形資産が少ないため償還年数は短め（7年）に設定。利益率と手元流動性を重視。', years: 7 },
+      { id: 'medical', icon: '🏥', name: '医療・クリニック・介護', desc: '診療報酬等で収益が安定しているため、償還年数は長め（15年程度）に設定可能。', years: 15 },
+      { id: 'startup', icon: '🚀', name: 'スタートアップ・開業', desc: '初期の赤字や債務超過を許容し、将来キャッシュフローとランウェイを重視する特例判定。', years: 10 }
+    ];
+
+    modes.forEach(m => {
+      const isActive = this.industry === m.id;
+      html += `<div class="glass-card${isActive ? ' highlight' : ''}" style="padding:16px;cursor:pointer;position:relative;"
+        onclick="BankAudit.selectIndustryMode('${m.id}')">
+        ${isActive ? '<span class="tag tag-success" style="position:absolute;top:8px;right:8px;">選択中</span>' : ''}
+        <div style="font-size:24px;margin-bottom:8px;">${m.icon}</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">${m.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">基準償還年数: ${m.years}年</div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">${m.desc}</div>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+    App.addSystemMessage(html);
+  },
+
+  selectIndustryMode(id) {
+    this.industry = id;
+    const dna = Database.loadCompanyData() || {};
+    dna.industryCode = id;
+    Database.saveCompanyData(dna);
+    App.addSystemMessage(Utils.createAlert('success', '✅', '業種特化モードを切り替えました。計算ロジックと基準年数が変更されます。'));
+    this.showCaseJudgment();
   },
 
   // ===== MODULE 3-B: 実態修正 =====
