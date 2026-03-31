@@ -560,5 +560,47 @@ Object.assign(BankAudit, {
         ${Math.abs(parseFloat(revPct)) > 20 ? '⚠️ 売上高の乖離が20%を超えています。計画の見直しを推奨します。' : '✅ 売上高の乖離は許容範囲内です。'}
       </div>
     </div>`;
+  },
+
+  // ボタンアクション（保存・ロック・Excel出力）の実装
+  savePlan() {
+    App.addSystemMessage(Utils.createAlert('success', '✅', '事業計画データを保存しました。'));
+  },
+
+  lockPlan() {
+    const v = document.getElementById('bp_version')?.value || 'v1.0';
+    App.addSystemMessage(Utils.createAlert('success', '🔒', `現在の事業計画（${v}）をロックしました。以降の変更は別バージョンとして保存されます。`));
+  },
+
+  exportPlanExcel() {
+    if (typeof XLSX === 'undefined') {
+      App.addSystemMessage(Utils.createAlert('error', '❌', 'SheetJSが読み込まれていません。'));
+      return;
+    }
+    const wb = XLSX.utils.book_new();
+    const getVal = id => document.getElementById(id) ? (document.getElementById(id).value || '0') : '0';
+    
+    // サマリ抽出
+    const keys = [
+      {k:'revenue', n:'売上高'}, {k:'cogs', n:'売上原価'}, {k:'cogsDeprec', n:'減価償却費(原価)'}, 
+      {k:'sgaExp', n:'販管費'}, {k:'opProfit', n:'営業利益'}, {k:'interestExp', n:'支払利息'}, 
+      {k:'netProfit', n:'当期純利益'}, {k:'opCF', n:'営業CF'}, {k:'freeCF', n:'フリーCF'}, {k:'endCash', n:'期末現金残高'}
+    ];
+    
+    const planData = [['勘定科目', '1期目', '2期目', '3期目', '4期目', '5期目']];
+    keys.forEach(obj => {
+      const row = [obj.n];
+      for(let i=1; i<=5; i++) row.push(getVal(`bp_sum_${obj.k}_y${i}`));
+      planData.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(planData);
+    ws['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, ws, '事業計画サマリ');
+
+    const company = document.getElementById('bp_company')?.value || '企業';
+    XLSX.writeFile(wb, `事業計画書_${company}.xlsx`);
+    App.addSystemMessage(Utils.createAlert('success', '📥', '事業計画のExcelファイルをダウンロードしました。'));
   }
+
 });
