@@ -343,20 +343,63 @@
       <button class="modal-close" onclick="document.getElementById('userSettingsModal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body">
-      <!-- APIとシステム設定 -->
+      <!-- ユーザーアカウント情報 -->
       <div style="margin-bottom:24px;">
-        <div style="font-size:14px;font-weight:700;color:var(--primary-light);margin-bottom:12px;border-bottom:1px solid var(--border-primary);padding-bottom:4px;">システム・AI設定</div>
+        <div style="font-size:14px;font-weight:700;color:var(--primary-light);margin-bottom:12px;border-bottom:1px solid var(--border-primary);padding-bottom:4px;">👤 アカウント情報</div>
+        
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div style="flex:1;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">ユーザー名</label>
+            <input type="text" id="userSettingsName" value="山田太郎 (Admin)" placeholder="ユーザー名" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">メールアドレス</label>
+            <input type="email" id="userSettingsEmail" value="admin@example.com" placeholder="メールアドレス" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <button class="btn btn-secondary btn-sm" style="font-size:11px;">パスワードを変更</button>
+        </div>
+      </div>
+
+      <!-- 環境・UI設定 -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:700;color:var(--primary-light);margin-bottom:12px;border-bottom:1px solid var(--border-primary);padding-bottom:4px;">🎨 UI・環境設定</div>
         
         <div style="margin-bottom:16px;">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">OpenAI APIキー (AI資料作成などに使用)</label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">テーマ選択（外観）</label>
+          <div style="display:flex;gap:12px;">
+             <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="ui_theme" value="dark" checked> 🌙 ダークモード</label>
+             <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="ui_theme" value="light" onclick="App.toggleTheme()"> ☀️ ライトモード切替</label>
+          </div>
+        </div>
+        
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">通知設定</label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:4px;">
+            <input type="checkbox" checked> AI資料生成完了時にブラウザ通知を受け取る
+          </label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" checked> 最高管理者からのシステム更新通知を受け取る
+          </label>
+        </div>
+      </div>
+
+      <!-- APIとシステム設定 -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:700;color:var(--primary-light);margin-bottom:12px;border-bottom:1px solid var(--border-primary);padding-bottom:4px;">🤖 AI連携ソリューション設定</div>
+        
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">OpenAI APIキー (高度な推論・資料作成に使用)</label>
           <input type="password" id="userSettingsApiKey" placeholder="sk-..." style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">※APIキーはブラウザに安全にローカル保存されます</div>
         </div>
         <div style="margin-bottom:16px;">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">使用するAIモデル</label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">システム思考AIモデル</label>
           <select id="userSettingsAiModel" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
-            <option value="gpt-4o-mini">GPT-4o mini (高速・低コスト)</option>
-            <option value="gpt-4o">GPT-4o (高性能)</option>
-            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="gpt-4o-mini">GPT-4o mini (標準・高速ロジック)</option>
+            <option value="gpt-4o">GPT-4o (精度重視・面談シミュレーション推奨)</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo (複雑な財務解析用)</option>
           </select>
         </div>
       </div>

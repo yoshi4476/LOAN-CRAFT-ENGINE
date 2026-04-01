@@ -593,10 +593,25 @@ const UserSettings = {
   // 設定モーダルの表示
   show() {
     const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    
+    // API設定
     const apiKeyInput = document.getElementById('userSettingsApiKey');
     const aiModelSelect = document.getElementById('userSettingsAiModel');
     if (apiKeyInput) apiKeyInput.value = settings.openaiApiKey || '';
     if (aiModelSelect) aiModelSelect.value = settings.openaiModel || 'gpt-4o-mini';
+
+    // アカウント情報
+    const nameInput = document.getElementById('userSettingsName');
+    const emailInput = document.getElementById('userSettingsEmail');
+    if (nameInput) nameInput.value = settings.userName || '山田太郎 (Admin)';
+    if (emailInput) emailInput.value = settings.userEmail || 'admin@example.com';
+
+    // テーマ設定
+    const themeRadios = document.querySelectorAll('input[name="ui_theme"]');
+    const currentTheme = settings.theme || (document.body.classList.contains('light-theme') ? 'light' : 'dark');
+    themeRadios.forEach(r => {
+      r.checked = (r.value === currentTheme);
+    });
     
     this.renderProfilesList();
     document.getElementById('userSettingsModal').style.display = 'flex';
@@ -604,17 +619,35 @@ const UserSettings = {
 
   // 基本設定の保存
   saveSettings() {
+    // API設定
     const apiKey = document.getElementById('userSettingsApiKey')?.value.trim() || '';
     const aiModel = document.getElementById('userSettingsAiModel')?.value || 'gpt-4o-mini';
+    
+    // アカウント設定
+    const userName = document.getElementById('userSettingsName')?.value.trim() || '山田太郎 (Admin)';
+    const userEmail = document.getElementById('userSettingsEmail')?.value.trim() || 'admin@example.com';
+
+    // テーマ設定
+    const themeStr = document.querySelector('input[name="ui_theme"]:checked')?.value || 'dark';
     
     let settings = Database.load(Database.KEYS.SETTINGS) || {};
     settings.openaiApiKey = apiKey;
     settings.openaiModel = aiModel;
+    settings.userName = userName;
+    settings.userEmail = userEmail;
+    settings.theme = themeStr;
     
     Database.save(Database.KEYS.SETTINGS, settings);
+
+    // テーマ即時適用
+    if(themeStr === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
     
     document.getElementById('userSettingsModal').style.display = 'none';
-    App.addSystemMessage(Utils.createAlert('success', '✅', 'システム・AI設定を保存しました。'));
+    App.addSystemMessage(Utils.createAlert('success', '✅', 'システム・アカウント設定を保存しました。'));
   },
 
   // 現在の企業データを新規プロファイルとして保存
