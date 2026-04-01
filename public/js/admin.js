@@ -47,7 +47,35 @@ const Admin = {
         </div>
       </div>
 
-      <div class="report-subtitle">💾 データ管理</div>
+      <div class="report-subtitle">🏢 SaaSテナント・ライセンス管理</div>
+      <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:12px;padding:16px;margin-bottom:20px;">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+          <div style="flex:1;min-width:200px;">
+            <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">新規テナント名 (企業名・組織名)</label>
+            <input type="text" id="saasTenantName" placeholder="例: 株式会社サンプル" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">利用プラン</label>
+            <select id="saasTenantPlan" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+              <option value="Free">Free (無料お試し)</option>
+              <option value="Pro">Pro (スタンダード)</option>
+              <option value="Enterprise" selected>Enterprise (最高峰プラン)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+          <div style="flex:1;min-width:200px;">
+            <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">管理者メールアドレス</label>
+            <input type="email" id="saasAdminEmail" placeholder="admin@example.com" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+          </div>
+          <div style="flex:1;min-width:200px;display:flex;align-items:flex-end;">
+            <button class="btn btn-primary" onclick="Admin.issueLicense()" style="width:100%;">🔑 テナント＆ライセンスを即時発行</button>
+          </div>
+        </div>
+        <div id="saasLicenseResult" style="display:none;background:rgba(76,175,80,0.1);border:1px dashed var(--accent-green);padding:12px;border-radius:6px;font-size:12px;word-break:break-all;"></div>
+      </div>
+
+      <div class="report-subtitle">💾 バックアップ・データ管理</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
         <button class="btn btn-primary" onclick="Database.exportAll()">📥 エクスポート</button>
         <button class="btn btn-secondary" onclick="Database.importData()">📤 インポート</button>
@@ -113,5 +141,62 @@ const Admin = {
     usage.calls += 1;
     settings.apiUsage = usage;
     Database.save(Database.KEYS.SETTINGS, settings);
+  },
+
+  // ライセンス発行ロジック（UIからの呼び出し）
+  async issueLicense() {
+    const tenantName = document.getElementById('saasTenantName')?.value.trim();
+    const email = document.getElementById('saasAdminEmail')?.value.trim();
+    const plan = document.getElementById('saasTenantPlan')?.value;
+
+    if (!tenantName || !email) {
+      App.addSystemMessage(Utils.createAlert('error', '❌', 'テナント名とメールアドレスは必須です'));
+      return;
+    }
+
+    const resBox = document.getElementById('saasLicenseResult');
+    resBox.style.display = 'block';
+    resBox.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></div> 発行中...';
+
+    try {
+      if (typeof ApiClient !== 'undefined' && ApiClient.getToken()) {
+        // バックエンド（本番環境）経由での発行
+        const tenantRes = await ApiClient.request('/api/admin/tenants', {
+          method: 'POST',
+          body: JSON.stringify({ name: tenantName, plan: plan })
+        });
+        
+        const userRes = await ApiClient.request('/api/admin/users', {
+          method: 'POST',
+          body: JSON.stringify({ name: tenantName + '管理者', email: email, plan: plan, contractMonths: 12, memo: 'Console発行' })
+        });
+
+        resBox.innerHTML = `
+          <div style="font-weight:700;color:var(--accent-green);margin-bottom:8px;">✅ ライセンス発行成功</div>
+          <div><strong>テナント:</strong> ${tenantName} (${plan}プラン)</div>
+          <div><strong>管理者メール:</strong> ${email}</div>
+          <div style="margin-top:8px;font-family:var(--font-mono);background:var(--bg-card);padding:8px;border-radius:4px;color:var(--primary-light);">
+            ライセンスキー: <br><span style="font-size:14px;">${userRes.licenseKey}</span>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">※このライセンスキーをユーザーに通知してください。初期パスワードは「temppassword123」です。</div>
+        `;
+      } else {
+        // ローカル環境（オフライン）向けモック発行
+        setTimeout(() => {
+          const mockKey = 'lce-' + Math.random().toString(36).substring(2, 10).toUpperCase() + '-' + plan.toUpperCase();
+          resBox.innerHTML = `
+            <div style="font-weight:700;color:var(--accent-green);margin-bottom:8px;">✅ (モック) ライセンス発行成功</div>
+            <div><strong>テナント:</strong> ${tenantName} (${plan}プラン)</div>
+            <div><strong>管理者メール:</strong> ${email}</div>
+            <div style="margin-top:8px;font-family:var(--font-mono);background:var(--bg-card);padding:8px;border-radius:4px;color:var(--primary-light);">
+              仮ライセンスキー: <br><span style="font-size:14px;">${mockKey}</span>
+            </div>
+            <div style="margin-top:8px;font-size:10px;color:var(--text-muted);">※バックエンドAPI未接続のためローカル発行シミュレーションです</div>
+          `;
+        }, 800);
+      }
+    } catch (err) {
+      resBox.innerHTML = `<span style="color:var(--accent-red)">発行エラー: ${err.message}</span>`;
+    }
   }
 };
