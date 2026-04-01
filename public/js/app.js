@@ -598,11 +598,12 @@ const UserSettings = {
     if (apiKeyInput) apiKeyInput.value = settings.openaiApiKey || '';
     if (aiModelSelect) aiModelSelect.value = settings.openaiModel || 'gpt-4o-mini';
     
+    this.renderProfilesList();
     document.getElementById('userSettingsModal').style.display = 'flex';
   },
 
-  // 設定の保存
-  save() {
+  // 基本設定の保存
+  saveSettings() {
     const apiKey = document.getElementById('userSettingsApiKey')?.value.trim() || '';
     const aiModel = document.getElementById('userSettingsAiModel')?.value || 'gpt-4o-mini';
     
@@ -613,7 +614,80 @@ const UserSettings = {
     Database.save(Database.KEYS.SETTINGS, settings);
     
     document.getElementById('userSettingsModal').style.display = 'none';
-    App.addSystemMessage(Utils.createAlert('success', '✅', 'ユーザー設定を保存しました。以降のAIアシスタント機能に適用されます。'));
+    App.addSystemMessage(Utils.createAlert('success', '✅', 'システム・AI設定を保存しました。'));
+  },
+
+  // 現在の企業データを新規プロファイルとして保存
+  saveCurrentProfile() {
+    const nameInput = document.getElementById('newProfileName');
+    const name = nameInput?.value.trim() || `無名の企業 (${new Date().toLocaleDateString()})`;
+    
+    const currentData = Database.loadCompanyData();
+    const profiles = Database.load('lce_company_profiles') || [];
+    
+    const newProfile = {
+      id: 'prof_' + Date.now(),
+      name: name,
+      savedAt: new Date().toISOString(),
+      industry: currentData.industry || '未設定',
+      data: currentData
+    };
+    
+    profiles.push(newProfile);
+    Database.save('lce_company_profiles', profiles);
+    
+    if(nameInput) nameInput.value = '';
+    this.renderProfilesList();
+    App.addSystemMessage(Utils.createAlert('success', '🏢', `企業プロファイル「${name}」を保存しました。`));
+  },
+
+  // 選択したプロファイルを削除
+  deleteProfile(id) {
+    if(!confirm('本当にこの企業プロファイルを削除しますか？')) return;
+    let profiles = Database.load('lce_company_profiles') || [];
+    profiles = profiles.filter(p => p.id !== id);
+    Database.save('lce_company_profiles', profiles);
+    this.renderProfilesList();
+  },
+
+  // 選択したプロファイルをロード（切り替え）
+  loadProfile(id) {
+    if(!confirm('現在の未保存の変更は失われます。プロファイルを切り替えますか？')) return;
+    const profiles = Database.load('lce_company_profiles') || [];
+    const target = profiles.find(p => p.id === id);
+    if(target && target.data) {
+      Database.saveCompanyData(target.data);
+      // 再読み込みして画面全体を更新
+      window.location.reload();
+    }
+  },
+
+  // 保存済みプロファイル一覧の描画
+  renderProfilesList() {
+    const profiles = Database.load('lce_company_profiles') || [];
+    const container = document.getElementById('profilesList');
+    if(!container) return;
+
+    if(profiles.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:10px;">保存されたプロファイルはありません</div>';
+      return;
+    }
+
+    container.innerHTML = profiles.reverse().map(p => {
+      const dateStr = new Date(p.savedAt).toLocaleDateString();
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-card);padding:8px 12px;border-radius:4px;margin-bottom:6px;border:1px solid var(--border-secondary);">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${Utils.escapeHtml(p.name)}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${p.industry} | 保存日: ${dateStr}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="UserSettings.loadProfile('${p.id}')" style="padding:4px 8px;font-size:11px;">切替</button>
+            <button class="btn btn-danger btn-sm" onclick="UserSettings.deleteProfile('${p.id}')" style="padding:4px 8px;font-size:11px;">削除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
   },
 
   // アプリ起動時の設定読み込み

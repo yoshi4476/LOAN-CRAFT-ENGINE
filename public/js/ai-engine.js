@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
  * LOAN CRAFT ENGINE v5.0 - AI文書生成エンジン（ローカル＋サーバー対応）
  * ============================================================ */
 
@@ -234,7 +234,7 @@ const AIEngine = {
 
   buildUserPrompt(docType, dna, customPrompt) {
     let context = '【企業情報（DNAデータ）】\n';
-    const fields = { companyName:'会社名', industry:'業種', yearsInBusiness:'業歴(年)', employeeCount:'従業員数', annualRevenue:'年商(万円)', operatingProfit:'営業利益(万円)', ordinaryProfit:'経常利益(万円)', netIncome:'税引後利益(万円)', totalAssets:'総資産(万円)', netAssets:'純資産(万円)', totalDebt:'有利子負債(万円)', loanAmount:'融資希望額(万円)', loanPurpose:'資金使途', businessModel:'事業モデル', competitiveAdvantage:'競争優位性', repaymentSource:'返済原資', mainBank:'メインバンク', mainBankYears:'取引年数' };
+    const fields = { companyName:'会社名', industry:'業種', yearsInBusiness:'業歴(年)', employeeCount:'従業員数', annualRevenue:'年商(万円)', operatingProfit:'営業利益(万円)', ordinaryProfit:'経常利益(万円)', netIncome:'税引後利益(万円)', totalAssets:'総資産(万円)', netAssets:'純資産(万円)', totalDebt:'有利子負債(万円)', loanAmount:'融資希望額(万円)', loanPurpose:'資金使途', businessModel:'事業モデル', revenueBreakdown:'事業セグメント（売上・利益構成）', competitiveAdvantage:'競争優位性', repaymentSource:'返済原資', mainBank:'メインバンク', mainBankYears:'取引年数' };
     Object.entries(fields).forEach(([k, label]) => { if (dna[k]) context += `${label}: ${dna[k]}\n`; });
 
     // 財務データがあれば追加

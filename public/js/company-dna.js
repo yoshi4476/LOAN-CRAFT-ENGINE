@@ -188,6 +188,30 @@ const CompanyDNA = {
       <span style="margin-left:auto;">🔴最重要 🟡重要 ⚪参考</span>
     </div>`;
 
+    if (section.id === 'financial') {
+      html += `<div style="margin-bottom:20px;padding:12px;background:rgba(245,166,35,0.05);border:1px dashed var(--accent-gold);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--text-secondary);">決算書（PDF/Excel）から数値を自動抽出し、以下のフォームへ入力します。</span>
+        <button class="btn btn-primary btn-sm" onclick="BankAudit.showExcelImportForDNA()" style="background:var(--accent-gold);color:#000;">
+          <span class="icon">📊</span> 決算書から自動入力
+        </button>
+      </div>`;
+    }
+    
+    if (section.id === 'business') {
+      const segText = this.dnaData['revenueBreakdown'] || '';
+      html += `<div style="margin-bottom:20px;padding:12px;background:rgba(108,99,255,0.05);border:1px solid var(--border-secondary);border-radius:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;color:var(--primary-light);">🏢 複数事業セグメント構成（エンタープライズ版）</div>
+          <button class="btn btn-secondary btn-sm" onclick="CompanyDNA.addSegment()" style="padding:4px 8px;font-size:11px;">+ セグメント追加</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">企業が複数の異なる事業を運営している場合、事業ごとの「売上構成比」や「利益貢献度」を明確に記載することで、AIが案件ごとの返済財源を正確に評価します。</div>
+        
+        <div id="dynamicSegmentsContainer"></div>
+        
+        <textarea class="dna-input" data-key="revenueBreakdown" rows="3" placeholder="手動入力も可能です。例:&#10;・IT開発事業：売上比率60%（安定黒字・全社利益の柱）&#10;・不動産事業：売上比率40%（今回融資の対象プロジェクト）" style="width:100%;padding:10px;background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:var(--border-radius-sm);color:var(--text-primary);font-size:13px;font-family:var(--font-primary);resize:vertical;">${segText}</textarea>
+      </div>`;
+    }
+
     // フィールド
     fields.forEach(f => {
       const val = this.dnaData[f.key] || '';
@@ -207,6 +231,12 @@ const CompanyDNA = {
 
       if (f.hint) {
         html += `<div style="font-size:11px;color:var(--accent-cyan);margin-bottom:4px;">${f.hint}</div>`;
+      }
+
+      if (f.key === 'revenueBreakdown' && section.id === 'business') {
+        // すでにカスタムUIを描画しているためスキップ
+        html += `</div>`;
+        return;
       }
 
       if (f.type === 'select') {
@@ -278,6 +308,12 @@ const CompanyDNA = {
         document.querySelectorAll('.dna-input').forEach(el => {
           el.addEventListener('input', () => CompanyDNA.updateFinancialIndicators());
         });
+      }, 100);
+    }
+
+    if (section.id === 'business') {
+      setTimeout(() => {
+        CompanyDNA.renderSegments();
       }, 100);
     }
   },
@@ -773,3 +809,62 @@ const CompanyDNA = {
     return methods;
   }
 };
+
+// --- 複数事業セグメント（エンタープライズ版）管理機能 ---
+Object.assign(CompanyDNA, {
+  renderSegments() {
+    const container = document.getElementById('dynamicSegmentsContainer');
+    if(!container) return;
+    
+    let segments = this.dnaData.businessSegments || [];
+    if(segments.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = `<div style="margin-bottom:12px;border-bottom:1px dashed var(--border-secondary);padding-bottom:12px;">`;
+    segments.forEach((seg, idx) => {
+      html += `<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+        <input type="text" class="dna-seg-input" data-idx="${idx}" data-field="name" value="${seg.name || ''}" placeholder="事業名 (例: IT事業)" style="flex:2;padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+        <input type="number" class="dna-seg-input" data-idx="${idx}" data-field="salesRatio" value="${seg.salesRatio || ''}" placeholder="売上比率(%)" style="flex:1;padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+        <input type="text" class="dna-seg-input" data-idx="${idx}" data-field="note" value="${seg.note || ''}" placeholder="特徴・利益貢献など" style="flex:3;padding:6px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+        <button class="btn btn-danger btn-sm" onclick="CompanyDNA.removeSegment(${idx})" style="padding:4px 8px;font-size:10px;">削除</button>
+      </div>`;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.dna-seg-input').forEach(el => {
+      el.addEventListener('change', (e) => {
+        const idx = e.target.getAttribute('data-idx');
+        const field = e.target.getAttribute('data-field');
+        CompanyDNA.dnaData.businessSegments[idx][field] = e.target.value;
+        CompanyDNA.updateSegmentTextarea();
+        Database.saveCompanyData(CompanyDNA.dnaData);
+      });
+    });
+  },
+
+  addSegment() {
+    if(!this.dnaData.businessSegments) this.dnaData.businessSegments = [];
+    this.dnaData.businessSegments.push({ name: '', salesRatio: '', note: '' });
+    this.renderSegments();
+  },
+
+  removeSegment(idx) {
+    if(!this.dnaData.businessSegments) return;
+    this.dnaData.businessSegments.splice(idx, 1);
+    this.updateSegmentTextarea();
+    Database.saveCompanyData(this.dnaData);
+    this.renderSegments();
+  },
+
+  updateSegmentTextarea() {
+    const segments = this.dnaData.businessSegments || [];
+    if(segments.length === 0) return;
+    const text = segments.map(s => `・${s.name || '名称未設定'}：売上比率${s.salesRatio || 0}%（${s.note || ''}）`).join('\n');
+    this.dnaData.revenueBreakdown = text;
+    const ta = document.querySelector('textarea[data-key="revenueBreakdown"]');
+    if(ta) ta.value = text;
+  }
+});
