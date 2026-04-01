@@ -28,6 +28,21 @@
     </div>
 
     <nav class="sidebar-nav" id="sidebarNav">
+      <!-- 業種モード設定 -->
+      <div style="padding: 10px 20px 8px 20px; border-bottom: 1px solid var(--border-primary);">
+        <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; display: block;">🏢 審査基準（業種モード）</label>
+        <select id="globalIndustryMode" onchange="AssessmentModes.setIndustryMode(this.value)" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-secondary); background: var(--bg-input); color: var(--text-primary); font-size: 12px; appearance: auto; cursor: pointer;">
+          <option value="default">全業種共通（標準）</option>
+          <option value="real_estate">不動産（返済年数緩和）</option>
+          <option value="it">ITベンチャー（流動性重視）</option>
+          <option value="restaurant">飲食・サービス（黒字化）</option>
+          <option value="construction">建設業（季節変動加味）</option>
+          <option value="medical">医療・介護（制度報酬）</option>
+          <option value="startup">スタートアップ（成長性）</option>
+          <option value="startup_pro">プロ・スタートアップ</option>
+        </select>
+      </div>
+
       <!-- ステップ1: 企業情報登録 -->
       <div class="nav-step" data-step="1">
         <div class="nav-step-header active" onclick="App.toggleStep(1)">
@@ -187,6 +202,13 @@
 
       <div class="nav-divider"></div>
 
+      <!-- ユーザー設定（新設） -->
+      <div class="nav-item" onclick="if(typeof typeof UserSettings !== 'undefined') UserSettings.show(); else Admin.show();" style="padding:8px 20px;font-weight:600;">
+        <span class="icon">⚙️</span> ユーザー設定
+      </div>
+
+      <div class="nav-divider"></div>
+
             <!-- ツール（折りたたみ） -->
       <div class="nav-step" data-step="tools">
         <div class="nav-step-header tools-header" onclick="App.toggleStep('tools')">
@@ -309,6 +331,34 @@
     </div>
     <div class="palette-results" id="paletteResults">
       <!-- コマンドリストはJSで動的に生成 -->
+    </div>
+  </div>
+</div>
+
+<!-- ユーザー設定モーダル -->
+<div id="userSettingsModal" class="modal">
+  <div class="modal-content" style="max-width:500px;">
+    <div class="modal-header">
+      <h2>⚙️ ユーザー設定</h2>
+      <button class="modal-close" onclick="document.getElementById('userSettingsModal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">OpenAI APIキー (AI資料作成などに使用)</label>
+        <input type="password" id="userSettingsApiKey" placeholder="sk-..." style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block;">使用するAIモデル</label>
+        <select id="userSettingsAiModel" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+          <option value="gpt-4o-mini">GPT-4o mini (高速・低コスト)</option>
+          <option value="gpt-4o">GPT-4o (高性能)</option>
+          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer" style="text-align:right;border-top:1px solid var(--border-primary);padding-top:16px;margin-top:20px;">
+      <button class="btn btn-secondary" onclick="document.getElementById('userSettingsModal').style.display='none'">キャンセル</button>
+      <button class="btn btn-primary" onclick="UserSettings.save()">保存</button>
     </div>
   </div>
 </div>

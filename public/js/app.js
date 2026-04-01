@@ -60,7 +60,6 @@ const App = {
     { cmd: '/AI決算', label: '/AI決算', desc: '📊 AI決算書分析レポート', fn: () => FinancialAnalysis.aiAnalyzeFinancials() },
     { cmd: '/AI交渉', label: '/AI交渉', desc: '💰 AI金利交渉戦略', fn: () => Strategy.aiNegotiationStrategy() },
     { cmd: '/AI整合', label: '/AI整合', desc: '✅ AI整合性チェック', fn: () => Extra.aiConsistencyCheck() },
-    { cmd: '/業種モード', label: '/業種モード', desc: '🏢 業種特化モード切替', fn: () => BankAudit.showIndustryModeSelector() },
     { cmd: '/資金繰り表', label: '/資金繰り表', desc: '📅 短期資金繰り予測作成', fn: () => BankAudit.showCashFlowTable() },
     { cmd: '/ベンチマーク', label: '/ベンチマーク', desc: '📊 業界平均との比較分析', fn: () => Extra.showBenchmark() },
     { cmd: '/help', label: '/help', desc: 'コマンド一覧表示', fn: () => App.showHelp() },
@@ -90,6 +89,9 @@ const App = {
     //   window.location.href = '/login';
     //   return;
     // }
+
+    // ユーザー設定値の復元
+    if (typeof UserSettings !== 'undefined') UserSettings.load();
 
     this.setupEventListeners();
     if (typeof AssessmentModes !== 'undefined') AssessmentModes.initFromSettings();
@@ -584,5 +586,47 @@ const App = {
   }
 };
 
+/* ============================================================
+ * ユーザー設定管理 (UserSettings)
+ * ============================================================ */
+const UserSettings = {
+  // 設定モーダルの表示
+  show() {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const apiKeyInput = document.getElementById('userSettingsApiKey');
+    const aiModelSelect = document.getElementById('userSettingsAiModel');
+    if (apiKeyInput) apiKeyInput.value = settings.openaiApiKey || '';
+    if (aiModelSelect) aiModelSelect.value = settings.openaiModel || 'gpt-4o-mini';
+    
+    document.getElementById('userSettingsModal').style.display = 'flex';
+  },
+
+  // 設定の保存
+  save() {
+    const apiKey = document.getElementById('userSettingsApiKey')?.value.trim() || '';
+    const aiModel = document.getElementById('userSettingsAiModel')?.value || 'gpt-4o-mini';
+    
+    let settings = Database.load(Database.KEYS.SETTINGS) || {};
+    settings.openaiApiKey = apiKey;
+    settings.openaiModel = aiModel;
+    
+    Database.save(Database.KEYS.SETTINGS, settings);
+    
+    document.getElementById('userSettingsModal').style.display = 'none';
+    App.addSystemMessage(Utils.createAlert('success', '✅', 'ユーザー設定を保存しました。以降のAIアシスタント機能に適用されます。'));
+  },
+
+  // アプリ起動時の設定読み込み
+  load() {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const globalModeSelect = document.getElementById('globalIndustryMode');
+    if (globalModeSelect && settings.industryMode) {
+      globalModeSelect.value = settings.industryMode;
+    }
+  }
+};
+
 // DOM読み込み完了後に初期化
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+});
