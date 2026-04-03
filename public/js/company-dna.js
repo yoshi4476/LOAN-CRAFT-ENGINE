@@ -188,6 +188,28 @@ const CompanyDNA = {
       <span style="margin-left:auto;">🔴最重要 🟡重要 ⚪参考</span>
     </div>`;
 
+    if (section.id === 'identity') {
+      html += `<div style="margin-bottom:20px;padding:16px;background:rgba(108,99,255,0.05);border:2px dashed var(--accent-primary);border-radius:12px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+          <div style="font-size:28px;">📊</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--primary-light);">決算書PDF/Excelから一括自動入力</div>
+            <div style="font-size:11px;color:var(--text-secondary);">会社名・代表者名・業種・住所・財務データをAIが自動抽出し、全セクションに反映します</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="BankAudit.showExcelImportForDNA()" style="font-size:13px;padding:10px 20px;">
+            📁 決算書から自動入力（推奨）
+          </button>
+          <label class="btn btn-secondary" style="font-size:13px;padding:10px 20px;cursor:pointer;">
+            📄 PDFを直接アップロード
+            <input type="file" accept=".pdf,.xlsx,.xls,.csv" style="display:none" onchange="BankAudit.handleExcelForDNA(this.files[0])">
+          </label>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:8px;">対応形式: .pdf / .xlsx / .xls / .csv — AIが勘定科目と企業情報を自動認識</div>
+      </div>`;
+    }
+
     if (section.id === 'financial') {
       html += `<div style="margin-bottom:20px;padding:12px;background:rgba(245,166,35,0.05);border:1px dashed var(--accent-gold);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:12px;color:var(--text-secondary);">決算書（PDF/Excel）から数値を自動抽出し、以下のフォームへ入力します。</span>
