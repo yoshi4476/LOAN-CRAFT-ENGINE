@@ -51,8 +51,15 @@ const SuperAdmin = {
       html += Utils.createAlert('info', 'ℹ️', 'サーバー未接続のためローカルモードで動作中です。データはブラウザに保存されます。');
     }
 
-    html += `</div></div>`;
-    App.addSystemMessage(html);
+    html += `</div>`;
+    const adminConsoleBody = document.getElementById('adminConsoleBody');
+    const adminConsoleModal = document.getElementById('adminConsoleModal');
+    if(adminConsoleBody && adminConsoleModal) {
+      adminConsoleBody.innerHTML = html;
+      adminConsoleModal.style.display = 'flex';
+    } else {
+      App.addSystemMessage(html); // フォールバック
+    }
   },
 
   /* ================================================================

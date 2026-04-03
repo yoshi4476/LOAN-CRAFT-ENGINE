@@ -71,21 +71,28 @@ router.post('/parse-pdf', authenticate, upload.single('file'), async (req, res) 
     const pdfData = await pdfParse(req.file.buffer);
     let textData = pdfData.text.slice(0, 30000); // トークン節約のため先頭3万文字に制限
 
-    // セキュリティマスキング処理（法人名・代表者名・電話番号・メールアドレスの秘匿化）
-    textData = textData
-      .replace(/(株式会社|有限会社|合同会社|一般社団法人|医療法人|ＮＰＯ法人)[\s　]*[^\s　,。、\n]+/g, '[MASKED COMPANY]')
-      .replace(/[^\s　,。、\n]+[\s　]*(株式会社|有限会社|合同会社)/g, '[MASKED COMPANY]')
-      .replace(/(代表取締役|取締役|代表社員)[　\s]*[^\s　,。、\n]+/g, '$1 [MASKED NAME]')
-      .replace(/0\d{1,4}[-(]?\d{1,4}[-)]?\d{3,4}/g, '[MASKED PHONE]')
-      .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[MASKED EMAIL]');
+    // テナント限定のプライベートデータのため、マスキングは不要（SaaS化済み）
+    // セキュリティは JWT + tenant_id によるアクセス制御で担保
 
     // 2. OpenAI APIでJSON構造化
-    const systemPrompt = `あなたはプロの財務コンサルタントです。提供される決算書のテキストデータ（OCR・PDF抽出）から以下の勘定科目の数値を抽出し、JSON形式で返答してください。
+    const systemPrompt = `あなたはプロの財務コンサルタントです。提供される決算書のテキストデータ（OCR・PDF抽出）から以下の勘定科目の数値および企業基本情報を抽出し、JSON形式で返答してください。
 抽出できない項目は null を設定してください。単位が「千円」や「百万円」で記載されている場合は、実際の数値（千円単位ならそのままの設定、円単位なら千円単位になどはしなくて良いので書かれている文字通りの数字）を出力してください。
 マークダウン表記（\`\`\`json）は使用せず、生のJSONオブジェクトのみを出力してください。
 
-【抽出項目（キーと内容の説明）】
+【企業基本情報（文字列で出力）】
+- companyName: 会社名（株式会社○○、有限会社○○ など法人格含む）
+- representativeName: 代表者名（代表取締役の氏名）
+- industry: 業種（製造業、卸売業、小売業、建設業、不動産業、IT・サービス業、飲食業、医療、農業 など）
+- establishedDate: 設立年月（"2010年4月" のような形式、不明なら null）
+- address: 本店所在地（都道府県から記載）
+- fiscalPeriod: 決算期（"2025年3月期" のような形式）
+- employees: 従業員数（数値。不明なら null）
+- phone: 電話番号（不明なら null）
+
+【抽出項目（数値で出力）】
 - revenue: 売上高
+- cogs: 売上原価
+- grossProfit: 売上総利益
 - opProfit: 営業利益
 - ordProfit: 経常利益
 - netProfit: 当期純利益
@@ -103,7 +110,10 @@ router.post('/parse-pdf', authenticate, upload.single('file'), async (req, res) 
 - currentAssets: 流動資産合計
 - fixedAssets: 固定資産合計
 - currentLiab: 流動負債合計
-- capital: 資本金`;
+- fixedLiab: 固定負債合計
+- totalLiab: 負債合計
+- capital: 資本金
+- retainedEarnings: 利益剰余金`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

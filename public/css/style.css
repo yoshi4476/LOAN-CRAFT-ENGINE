@@ -145,6 +145,68 @@ body::before {
   border-bottom: 1px solid var(--border-secondary);
 }
 
+/* --- ユーザープロフィールカード (SaaS UX) --- */
+.user-profile-card {
+  margin-top: auto; /* サイドバー末尾に固定 */
+  margin-bottom: 16px;
+  margin-inline: 16px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.user-profile-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary-light);
+  transform: translateY(-2px);
+}
+.light-theme .user-profile-card:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.user-profile-card .avatar {
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2);
+  border-radius: 50%;
+}
+.user-profile-card .info {
+  flex: 1;
+  overflow: hidden;
+}
+.user-profile-card .name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-profile-card .plan {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.user-profile-card .settings-icon {
+  font-size: 14px;
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+}
+.user-profile-card:hover .settings-icon {
+  opacity: 1;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;

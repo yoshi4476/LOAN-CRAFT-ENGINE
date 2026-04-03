@@ -2185,4 +2185,153 @@ ${bankProfiles[target] || bankProfiles.general}
       '<div style="font-size:12px;line-height:1.8;">○○（承認推奨の根拠を記載）</div>';
   },
 
+
+  // === 新テンプレート10種 ===
+
+  tmplImprovement(data, rr) {
+    const d = data; const rev = d.annualRevenue||'○○'; const op = d.operatingProfit||'○○';
+    return '<div class="report-subtitle">📈 経営改善計画書</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">項目</th><th style="padding:8px;">現状</th><th style="padding:8px;">1年後</th><th style="padding:8px;">2年後</th><th style="padding:8px;">3年後</th></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">売上高(万円)</td><td style="padding:6px;text-align:center;">' + rev + '</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">営業利益(万円)</td><td style="padding:6px;text-align:center;">' + op + '</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">経常利益(万円)</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">借入金残高(万円)</td><td style="padding:6px;text-align:center;">' + (d.totalDebt||'○○') + '</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td><td style="padding:6px;text-align:center;">○○</td></tr>' +
+      '</table>' +
+      '<div class="report-subtitle">改善アクション</div>' +
+      '<div style="font-size:12px;line-height:1.8;">1. ○○（具体的施策）<br>2. ○○<br>3. ○○</div>';
+  },
+
+  tmplEquipment(data) {
+    return '<div class="report-subtitle">🏭 設備投資計画書</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">項目</th><th style="padding:8px;">内容</th></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">設備名称</td><td style="padding:6px;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">メーカー/型番</td><td style="padding:6px;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">本体価格</td><td style="padding:6px;">○○万円</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">設置工事費</td><td style="padding:6px;">○○万円</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">投資合計</td><td style="padding:6px;">○○万円</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">期待効果（年間）</td><td style="padding:6px;">売上増加○○万円 / コスト削減○○万円</td></tr>' +
+      '<tr><td style="padding:6px;font-weight:600;">投資回収期間</td><td style="padding:6px;">○○年</td></tr>' +
+      '</table>';
+  },
+
+  tmplProfile(data) {
+    const d = data;
+    return '<div class="report-subtitle">👤 代表者略歴書</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;width:120px;">氏名</td><td style="padding:6px;">' + (d.representativeName||'○○') + '</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">生年月日</td><td style="padding:6px;">○○年○月○日</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">最終学歴</td><td style="padding:6px;">○○大学 ○○学部</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">業界経験</td><td style="padding:6px;">' + (d.industryExperience||'○○') + '年</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">保有資格</td><td style="padding:6px;">' + (d.qualifications||'○○') + '</td></tr>' +
+      '</table>' +
+      '<div class="report-subtitle">職歴</div>' +
+      '<div style="font-size:12px;line-height:1.8;">○○年○月 ○○株式会社 入社<br>○○年○月 ○○ 就任<br>○○年○月 当社設立</div>' +
+      '<div class="report-subtitle">経営ビジョン</div>' +
+      '<div style="font-size:12px;line-height:1.8;">○○（500字程度で記載）</div>';
+  },
+
+  tmplFundUse(data) {
+    const d = data;
+    return '<div class="report-subtitle">💹 資金使途明細書</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">使途</th><th style="padding:8px;">金額(万円)</th><th style="padding:8px;">支払先</th><th style="padding:8px;">支払時期</th></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;">○○</td><td style="padding:6px;">○年○月</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;">○○</td><td style="padding:6px;">○年○月</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;">○○</td><td style="padding:6px;">○年○月</td></tr>' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);font-weight:700;"><td style="padding:6px;">合計</td><td style="padding:6px;text-align:right;">○○</td><td colspan="2"></td></tr>' +
+      '</table>' +
+      '<div class="report-subtitle">調達内訳</div>' +
+      '<div style="font-size:12px;line-height:1.8;">自己資金: ○○万円<br>借入金: ○○万円<br>合計: ○○万円</div>';
+  },
+
+  tmplMonthly(data) {
+    const months = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月'];
+    let html = '<div class="report-subtitle">📅 月次業績推移表</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;font-size:11px;border-collapse:collapse;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:6px;">月</th>';
+    months.forEach(m => { html += '<th style="padding:6px;">' + m + '</th>'; });
+    html += '<th style="padding:6px;font-weight:700;">合計</th></tr>';
+    ['売上','原価','粗利','販管費','営利'].forEach(item => {
+      html += '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:4px;font-weight:600;">' + item + '</td>';
+      months.forEach(() => { html += '<td style="padding:4px;text-align:right;">○○</td>'; });
+      html += '<td style="padding:4px;text-align:right;font-weight:600;">○○</td></tr>';
+    });
+    html += '</table></div>';
+    return html;
+  },
+
+  tmplCollateral(data) {
+    return '<div class="report-subtitle">🏠 担保評価書</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">物件</th><th style="padding:8px;">所在地</th><th style="padding:8px;">面積</th><th style="padding:8px;">評価額(万)</th><th style="padding:8px;">抵当権</th></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">土地</td><td style="padding:6px;">○○</td><td style="padding:6px;">○○㎡</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">建物</td><td style="padding:6px;">○○</td><td style="padding:6px;">○○㎡</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;">○○</td></tr>' +
+      '</table>' +
+      '<div class="report-subtitle">担保余力</div>' +
+      '<div style="font-size:12px;">評価額合計: ○○万円<br>既存設定額: ○○万円<br>担保余力: ○○万円</div>';
+  },
+
+  tmplClients(data) {
+    return '<div class="report-subtitle">🤝 取引先一覧表（販売先）</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">企業名</th><th style="padding:8px;">年間売上(万)</th><th style="padding:8px;">構成比</th><th style="padding:8px;">取引年数</th><th style="padding:8px;">回収条件</th></tr>' +
+      [1,2,3,4,5].map(i => '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;text-align:right;">○○%</td><td style="padding:6px;text-align:right;">○○年</td><td style="padding:6px;">月末締翌月末</td></tr>').join('') +
+      '</table>' +
+      '<div class="report-subtitle">取引先一覧表（仕入先）</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">企業名</th><th style="padding:8px;">年間仕入(万)</th><th style="padding:8px;">構成比</th><th style="padding:8px;">取引年数</th><th style="padding:8px;">支払条件</th></tr>' +
+      [1,2,3].map(i => '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;text-align:right;">○○</td><td style="padding:6px;text-align:right;">○○%</td><td style="padding:6px;text-align:right;">○○年</td><td style="padding:6px;">月末締翌月末</td></tr>').join('') +
+      '</table>';
+  },
+
+  tmplPermits(data) {
+    return '<div class="report-subtitle">📜 許認可・資格一覧</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">許認可名称</th><th style="padding:8px;">番号</th><th style="padding:8px;">取得日</th><th style="padding:8px;">有効期限</th><th style="padding:8px;">管轄</th></tr>' +
+      [1,2,3].map(i => '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;">○○</td><td style="padding:6px;">○年○月</td><td style="padding:6px;">○年○月</td><td style="padding:6px;">○○</td></tr>').join('') +
+      '</table>' +
+      '<div class="report-subtitle">資格保有者一覧</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);"><th style="padding:8px;text-align:left;">資格名</th><th style="padding:8px;">保有者</th><th style="padding:8px;">取得日</th></tr>' +
+      [1,2].map(i => '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;">○○</td><td style="padding:6px;">○○</td><td style="padding:6px;">○年○月</td></tr>').join('') +
+      '</table>';
+  },
+
+  tmplSWOT(data, rr) {
+    return '<div class="report-subtitle">🎯 SWOT分析</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr><td style="width:50%;padding:12px;border:1px solid var(--border-secondary);vertical-align:top;background:rgba(0,200,100,0.05);"><strong>S（強み）</strong><br>1. ○○<br>2. ○○<br>3. ○○</td>' +
+      '<td style="width:50%;padding:12px;border:1px solid var(--border-secondary);vertical-align:top;background:rgba(255,100,100,0.05);"><strong>W（弱み）</strong><br>1. ○○<br>2. ○○<br>3. ○○</td></tr>' +
+      '<tr><td style="padding:12px;border:1px solid var(--border-secondary);vertical-align:top;background:rgba(0,150,255,0.05);"><strong>O（機会）</strong><br>1. ○○<br>2. ○○<br>3. ○○</td>' +
+      '<td style="padding:12px;border:1px solid var(--border-secondary);vertical-align:top;background:rgba(255,150,0,0.05);"><strong>T（脅威）</strong><br>1. ○○<br>2. ○○<br>3. ○○</td></tr>' +
+      '</table>' +
+      '<div class="report-subtitle">クロスSWOT戦略</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:8px;font-weight:600;">SO戦略</td><td style="padding:8px;">強み×機会: ○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:8px;font-weight:600;">WO戦略</td><td style="padding:8px;">弱み×機会: ○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:8px;font-weight:600;">ST戦略</td><td style="padding:8px;">強み×脅威: ○○</td></tr>' +
+      '<tr><td style="padding:8px;font-weight:600;">WT戦略</td><td style="padding:8px;">弱み×脅威: ○○</td></tr>' +
+      '</table>';
+  },
+
+  tmplRingi(data, rr) {
+    const d = data;
+    return '<div class="report-subtitle">🏦 稟議サポート資料</div>' +
+      '<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:16px;">' +
+      '<tr style="border-bottom:2px solid var(--border-secondary);background:var(--bg-tertiary);"><th colspan="2" style="padding:8px;text-align:left;">案件概要</th></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;width:120px;">借入人</td><td style="padding:6px;">' + (d.companyName||'○○') + '</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">業種</td><td style="padding:6px;">' + (d.industry||'○○') + '</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">年商</td><td style="padding:6px;">' + (d.annualRevenue||'○○') + '万円</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">融資金額</td><td style="padding:6px;">○○万円</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">資金使途</td><td style="padding:6px;">○○</td></tr>' +
+      '<tr style="border-bottom:1px solid var(--border-secondary);"><td style="padding:6px;font-weight:600;">返済方法</td><td style="padding:6px;">元金均等/元利均等 ○年</td></tr>' +
+      '</table>' +
+      '<div class="report-subtitle">融資判断ポイント</div>' +
+      '<div style="font-size:12px;line-height:1.8;">1. ○○<br>2. ○○<br>3. ○○</div>' +
+      '<div class="report-subtitle">総合所見</div>' +
+      '<div style="font-size:12px;line-height:1.8;">○○（承認推奨の根拠を記載）</div>';
+  },
+
 };

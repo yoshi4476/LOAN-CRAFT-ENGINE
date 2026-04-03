@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'lce-default-secret';
 const SUPER_ADMIN = process.env.SUPER_ADMIN_EMAIL || 'y.wakata.linkdesign@gmail.com';
 
-// トークン検証（トークンなし＝デフォルトユーザーとして通過）
+// トークン検証（トークン必須）
 function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
@@ -12,12 +12,10 @@ function authenticate(req, res, next) {
       req.user = decoded;
       return next();
     } catch (e) {
-      // トークン無効でもデフォルトユーザーで続行
+      return res.status(401).json({ error: '無効なトークンです' });
     }
   }
-  // デフォルトユーザー（ログイン不要モード — 最高管理者として動作）
-  req.user = { id: 1, email: SUPER_ADMIN, name: '管理者', role: 'super_admin', tenant_id: 1 };
-  next();
+  return res.status(401).json({ error: 'ライセンス認証が必要です' });
 }
 
 // 最高管理者チェック
@@ -33,7 +31,7 @@ function generateToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, name: user.name, role: user.role, tenant_id: user.tenant_id },
     SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '30d' }
   );
 }
 

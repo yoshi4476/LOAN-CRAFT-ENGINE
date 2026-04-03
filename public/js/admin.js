@@ -24,39 +24,40 @@ const Admin = {
     const totalCalls = (usage.calls || 0) + (localUsage.calls || 0);
     const totalCost = (usage.cost || 0) + (localUsage.cost || 0);
 
-    let html = `<div class="glass-card highlight">
-      <div class="report-title">⚙️ 管理コンソール</div>
-
-      <div class="report-subtitle">🛡️ データ保護ダッシュボード</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
-        <div class="glass-card" style="padding:14px;text-align:center;">
-          <div style="font-size:22px;font-weight:700;color:var(--primary-light);">${dataKeys.length}</div>
-          <div style="font-size:11px;color:var(--text-muted);">保存項目数</div>
+    let html = `<div>
+      <div class="report-subtitle">🛡️ システム稼働状況 (System Status)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:var(--primary-light);">${dataKeys.length}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">ロコ・ストレージ項目数</div>
         </div>
-        <div class="glass-card" style="padding:14px;text-align:center;">
-          <div style="font-size:22px;font-weight:700;color:var(--accent-cyan);">${sizeMB} MB</div>
-          <div style="font-size:11px;color:var(--text-muted);">データ使用量</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:var(--accent-cyan);">${sizeMB} MB</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">データ使用量</div>
         </div>
-        <div class="glass-card" style="padding:14px;text-align:center;">
-          <div style="font-size:22px;font-weight:700;color:var(--accent-green);">✅</div>
-          <div style="font-size:11px;color:var(--text-muted);">ローカル保存</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:var(--accent-green);">✅</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">エンジンステータス</div>
         </div>
-        <div class="glass-card" style="padding:14px;text-align:center;">
-          <div style="font-size:22px;font-weight:700;color:${totalCalls > 0 ? 'var(--accent-gold)' : 'var(--text-muted)'};">${totalCalls}</div>
-          <div style="font-size:11px;color:var(--text-muted);">API呼出回数</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:16px;text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:${totalCalls > 0 ? 'var(--accent-gold)' : 'var(--text-muted)'};">${totalCalls}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">累計API呼出回数</div>
         </div>
       </div>
 
       <div class="report-subtitle">🏢 SaaSテナント・ライセンス管理</div>
-      <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:12px;padding:16px;margin-bottom:20px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:20px;margin-bottom:24px;">
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">
+          クライアント企業に対し、環境ごとの専用テナントとライセンスキーを発行します。これによりデータが完全に分離保護されます。
+        </p>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
           <div style="flex:1;min-width:200px;">
-            <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">新規テナント名 (企業名・組織名)</label>
-            <input type="text" id="saasTenantName" placeholder="例: 株式会社サンプル" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">新規テナント名 (企業名・組織名)</label>
+            <input type="text" id="saasTenantName" placeholder="例: 株式会社サンプル" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
           </div>
           <div style="flex:1;min-width:200px;">
-            <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">利用プラン</label>
-            <select id="saasTenantPlan" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">利用プラン</label>
+            <select id="saasTenantPlan" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
               <option value="Free">Free (無料お試し)</option>
               <option value="Pro">Pro (スタンダード)</option>
               <option value="Enterprise" selected>Enterprise (最高峰プラン)</option>
@@ -65,53 +66,66 @@ const Admin = {
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
           <div style="flex:1;min-width:200px;">
-            <label style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">管理者メールアドレス</label>
-            <input type="email" id="saasAdminEmail" placeholder="admin@example.com" style="width:100%;padding:8px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:4px;color:var(--text-primary);font-size:12px;">
+            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">管理者メールアドレス</label>
+            <input type="email" id="saasAdminEmail" placeholder="admin@example.com" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
           </div>
           <div style="flex:1;min-width:200px;display:flex;align-items:flex-end;">
-            <button class="btn btn-primary" onclick="Admin.issueLicense()" style="width:100%;">🔑 テナント＆ライセンスを即時発行</button>
+            <button class="btn btn-primary" onclick="Admin.issueLicense()" style="width:100%;padding:10px;font-weight:600;">🔑 テナント＆ライセンスを即時発行</button>
           </div>
         </div>
-        <div id="saasLicenseResult" style="display:none;background:rgba(76,175,80,0.1);border:1px dashed var(--accent-green);padding:12px;border-radius:6px;font-size:12px;word-break:break-all;"></div>
+        <div id="saasLicenseResult" style="display:none;background:rgba(76,175,80,0.1);border:1px dashed var(--accent-green);padding:16px;border-radius:6px;font-size:13px;word-break:break-all;"></div>
       </div>
 
-      <div class="report-subtitle">💾 バックアップ・データ管理</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-        <button class="btn btn-primary" onclick="Database.exportAll()">📥 エクスポート</button>
-        <button class="btn btn-secondary" onclick="Database.importData()">📤 インポート</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <!-- バックアップ・データ管理 -->
+        <div>
+          <div class="report-subtitle">💾 バックアップ・データ管理</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:20px;">
+            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">現在のシステムデータを暗号化ZIP形式で退避、または復元します。</p>
+            <div style="display:flex;gap:12px;">
+              <button class="btn btn-primary" onclick="Database.exportAll()">📥 エクスポート</button>
+              <button class="btn btn-secondary" onclick="Database.importData()">📤 インポート</button>
+            </div>
+            
+            <div style="margin-top:24px;border-top:1px solid var(--border-secondary);padding-top:16px;">
+              <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">危険な操作 (DANGER ZONE)</div>
+              <button class="btn btn-sm" style="background:var(--accent-red);color:white;width:100%;" onclick="App.confirmClear()">⚠️ 全データを強制初期化</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- API設定と使用量 -->
+        <div>
+          <div class="report-subtitle">🔑 OpenAI API・課金状況</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-secondary);border-radius:8px;padding:20px;">
+            <div style="margin-bottom:16px;">
+              <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">APIキー (システム全体へ影響)</label>
+              <input id="adminApiKey" type="password" value="${settings.openaiApiKey || ''}" placeholder="sk-..." style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">
+            </div>
+            <div style="margin-bottom:16px;">
+              <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">デフォルトAIモデル</label>
+              <select id="adminApiModel" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:13px;">
+                <option value="gpt-4o-mini" ${(settings.openaiModel || 'gpt-4o-mini') === 'gpt-4o-mini' ? 'selected' : ''}>gpt-4o-mini（低コスト・高速）</option>
+                <option value="gpt-4o" ${settings.openaiModel === 'gpt-4o' ? 'selected' : ''}>gpt-4o（高精度）</option>
+                <option value="gpt-4-turbo" ${settings.openaiModel === 'gpt-4-turbo' ? 'selected' : ''}>gpt-4-turbo</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="Admin.saveApiSettings()" style="width:100%;margin-bottom:20px;">💾 API設定を適用</button>
+            
+            <div style="font-size:12px;font-weight:600;margin-bottom:8px;">課金シミュレーション実績</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border-secondary);padding:4px 0;">
+              <span>累計トークン:</span> <span>${((usage.tokens || 0) + (localUsage.tokens || 0)).toLocaleString()}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;">
+              <span>推定コスト:</span> <span style="font-weight:700;color:var(--accent-gold);">$${totalCost.toFixed(4)}</span>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div class="report-subtitle">🔑 OpenAI API設定</div>
-      <div style="margin-bottom:16px;">
-        <div style="font-size:11px;color:var(--accent-cyan);margin-bottom:8px;">APIキーを入力するとAI資料生成（/AI資料）が利用可能になります</div>
-        <input id="adminApiKey" type="password" value="${settings.openaiApiKey || ''}" placeholder="sk-..." style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:var(--border-radius-sm);color:var(--text-primary);font-size:13px;font-family:var(--font-mono);">
-      </div>
-      <div style="margin-bottom:16px;">
-        <select id="adminApiModel" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:var(--border-radius-sm);color:var(--text-primary);font-size:13px;">
-          <option value="gpt-4o-mini" ${(settings.openaiModel || 'gpt-4o-mini') === 'gpt-4o-mini' ? 'selected' : ''}>gpt-4o-mini（低コスト・高速）</option>
-          <option value="gpt-4o" ${settings.openaiModel === 'gpt-4o' ? 'selected' : ''}>gpt-4o（高精度）</option>
-          <option value="gpt-4-turbo" ${settings.openaiModel === 'gpt-4-turbo' ? 'selected' : ''}>gpt-4-turbo</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" onclick="Admin.saveApiSettings()">💾 API設定を保存</button>
-
-      <div class="report-subtitle" style="margin-top:20px;">📊 API使用量</div>`;
-
-    html += Utils.createTable(
-      ['項目', '値'],
-      [
-        ['累計API呼出回数', `${totalCalls}回`],
-        ['累計トークン使用量', `${((usage.tokens || 0) + (localUsage.tokens || 0)).toLocaleString()} tokens`],
-        ['累計推定コスト', `$${totalCost.toFixed(4)}（約${Math.ceil(totalCost * 150)}円）`],
-      ]
-    );
-
-    // データ初期化
-    html += `<div class="report-subtitle" style="margin-top:16px;">🗑️ データ初期化</div>
-      <button class="btn btn-sm" style="background:var(--accent-red);color:white;" onclick="App.confirmClear()">⚠️ 全データを初期化</button>
     </div>`;
 
-    App.addSystemMessage(html);
+    document.getElementById('adminConsoleBody').innerHTML = html;
+    document.getElementById('adminConsoleModal').style.display = 'flex';
   },
 
   saveApiSettings() {

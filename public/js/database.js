@@ -294,7 +294,37 @@ const Database = {
   },
 
   // --- データエクスポート（JSON） ---
-  exportAll() {
+  async exportAll() {
+    if (typeof ApiClient !== 'undefined' && ApiClient.getToken()) {
+      try {
+        App.addSystemMessage(Utils.createAlert('info', '⏳', 'サーバーからの全データ書き出しを実行中...'));
+        const response = await fetch(`${ApiClient.BASE}/api/data/export`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${ApiClient.getToken()}` }
+        });
+        if (!response.ok) throw new Error(await response.text());
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const disp = response.headers.get('Content-Disposition');
+        let filename = `loan_craft_export_${new Date().toISOString().slice(0, 10)}.json`;
+        if (disp && disp.indexOf('filename=') !== -1) {
+          filename = disp.split('filename=')[1].replace(/"/g, '');
+        }
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        App.addSystemMessage(Utils.createAlert('success', '✅', 'テナント内の全データをJSONファイルとしてエクスポートしました。'));
+        return;
+      } catch (e) {
+        console.error('エクスポートエラー:', e);
+        App.addSystemMessage(Utils.createAlert('critical', '❌', 'サーバーデータのダウンエクスポートに失敗しました。'));
+        return;
+      }
+    }
+
+    // ローカル版フォールバック
     const exportData = {
       version: '5.0',
       exportedAt: new Date().toISOString(),
@@ -308,10 +338,10 @@ const Database = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `loan_craft_export_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `loan_craft_local_export_${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    App.addSystemMessage(Utils.createAlert('success', '✅', 'データをJSONファイルとしてエクスポートしました。'));
+    App.addSystemMessage(Utils.createAlert('success', '✅', 'ローカルのデータをJSONファイルとしてエクスポートしました。'));
   },
 
   // --- データインポート（JSON） ---

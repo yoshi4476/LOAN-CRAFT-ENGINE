@@ -27,9 +27,8 @@ router.get('/documents/:docId', async (req, res) => {
 router.put('/documents/:docId', async (req, res) => {
   const { doc_name, content, mode } = req.body;
   const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
-  const existing = await dbGet('SELECT id FROM saved_documents WHERE tenant_id = ? AND doc_id = ?', [req.user.tenant_id, req.params.docId]);
   if (existing) {
-    await dbRun('UPDATE saved_documents SET doc_name=?, content=?, mode=?, updated_at=datetime("now") WHERE id=?', [doc_name, contentStr, mode || 'template', existing.id]);
+    await dbRun('UPDATE saved_documents SET doc_name=?, content=?, mode=?, updated_at=datetime("now") WHERE id=? AND tenant_id=?', [doc_name, contentStr, mode || 'template', existing.id, req.user.tenant_id]);
     res.json({ id: existing.id, updated: true });
   } else {
     const r = await dbRun('INSERT INTO saved_documents (user_id, tenant_id, doc_id, doc_name, content, mode) VALUES (?, ?, ?, ?, ?, ?)', [req.user.id, req.user.tenant_id, req.params.docId, doc_name, contentStr, mode || 'template']);
@@ -115,8 +114,8 @@ router.put('/schedules/:id', async (req, res) => {
   const existing = await dbGet('SELECT * FROM schedules WHERE id = ? AND tenant_id = ?', [parseInt(req.params.id), req.user.tenant_id]);
   if (!existing) return res.status(404).json({ error: 'スケジュールが見つかりません' });
   await dbRun(
-    'UPDATE schedules SET title=?, date=?, time=?, type=?, bank=?, memo=?, completed=?, updated_at=datetime("now") WHERE id=?',
-    [title || existing.title, date || existing.date, time ?? existing.time, type || existing.type, bank ?? existing.bank, memo ?? existing.memo, completed ?? existing.completed, parseInt(req.params.id)]
+    'UPDATE schedules SET title=?, date=?, time=?, type=?, bank=?, memo=?, completed=?, updated_at=datetime("now") WHERE id=? AND tenant_id=?',
+    [title || existing.title, date || existing.date, time ?? existing.time, type || existing.type, bank ?? existing.bank, memo ?? existing.memo, completed ?? existing.completed, parseInt(req.params.id), req.user.tenant_id]
   );
   res.json({ success: true });
 });
@@ -131,7 +130,7 @@ router.delete('/schedules/:id', async (req, res) => {
 router.post('/schedules/:id/toggle', async (req, res) => {
   const existing = await dbGet('SELECT completed FROM schedules WHERE id = ? AND tenant_id = ?', [parseInt(req.params.id), req.user.tenant_id]);
   if (!existing) return res.status(404).json({ error: 'スケジュールが見つかりません' });
-  await dbRun('UPDATE schedules SET completed = ?, updated_at = datetime("now") WHERE id = ?', [existing.completed ? 0 : 1, parseInt(req.params.id)]);
+  await dbRun('UPDATE schedules SET completed = ?, updated_at = datetime("now") WHERE id = ? AND tenant_id = ?', [existing.completed ? 0 : 1, parseInt(req.params.id), req.user.tenant_id]);
   res.json({ completed: !existing.completed });
 });
 

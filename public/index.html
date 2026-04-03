@@ -195,19 +195,25 @@
       <!-- 区切り線 -->
       <div class="nav-divider"></div>
 
+      <!-- インジケーター等のスペーサーとして少し余裕を持たせる -->
+      <div style="flex-grow: 1;"></div>
+
+      <div class="nav-divider" style="margin-top:auto;"></div>
+
       <!-- 最高管理者コンソール（常時表示・スクロール不要） -->
-      <div class="nav-item" data-cmd="/最高管理者" style="padding:8px 20px;color:var(--accent-gold);font-weight:600;">
-        <span class="icon">📊</span> 最高管理者コンソール
+      <div class="nav-item" data-cmd="/最高管理者" style="padding:8px 20px;color:var(--accent-gold);font-weight:600;margin-bottom:4px;">
+        <span class="icon">📊</span> 最高管理者ダッシュボード
       </div>
 
-      <div class="nav-divider"></div>
-
-      <!-- ユーザー設定（新設） -->
-      <div class="nav-item" onclick="if(typeof UserSettings !== 'undefined') UserSettings.show(); else Admin.show();" style="padding:8px 20px;font-weight:600;">
-        <span class="icon">⚙️</span> ユーザー設定
+      <!-- SaaS ユーザープロフィールカード -->
+      <div class="user-profile-card" onclick="if(typeof UserSettings !== 'undefined') UserSettings.show(); else Admin.show();">
+        <div class="avatar">👨‍💼</div>
+        <div class="info">
+          <div class="name" id="sidebarUserName">山田太郎</div>
+          <div class="plan"><span class="badge" style="background:var(--accent-gold);font-size:9px;padding:2px 6px;">Enterprise</span> <span id="sidebarTenantName" style="opacity:0.8;">株式会社サンプル</span></div>
+        </div>
+        <div class="settings-icon">⚙️</div>
       </div>
-
-      <div class="nav-divider"></div>
 
             <!-- ツール（折りたたみ） -->
       <div class="nav-step" data-step="tools">
@@ -431,6 +437,28 @@
     <div class="modal-footer" style="text-align:right;border-top:1px solid var(--border-primary);padding-top:16px;">
       <button class="btn btn-secondary" onclick="document.getElementById('userSettingsModal').style.display='none'">閉じる</button>
       <button class="btn btn-primary" onclick="UserSettings.saveSettings()">設定を適用</button>
+    </div>
+  </div>
+</div>
+
+<!-- 最高管理者ダッシュボード モーダル -->
+<div id="adminConsoleModal" class="modal">
+  <div class="modal-content" style="max-width:900px; height:85vh; display:flex; flex-direction:column; background:var(--bg-card); border:1px solid var(--border-secondary);">
+    <div class="modal-header" style="padding:16px 24px; border-bottom:1px solid var(--border-secondary); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">📊</span>
+        <div>
+          <h2 style="margin:0;font-size:18px;color:var(--text-primary);">最高管理者コンソール</h2>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">LOAN CRAFT ENGINE - SuperAdmin Dashboard</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('adminConsoleModal').style.display='none'" style="font-size:24px;">&times;</button>
+    </div>
+    <div class="modal-body" id="adminConsoleBody" style="flex:1; overflow-y:auto; padding:24px;">
+      <!-- admin.jsによって中身が動的に描画されます -->
+    </div>
+    <div class="modal-footer" style="padding:16px 24px; border-top:1px solid var(--border-secondary); background:rgba(0,0,0,0.1); text-align:right;">
+      <button class="btn btn-secondary" onclick="document.getElementById('adminConsoleModal').style.display='none'">閉じる</button>
     </div>
   </div>
 </div>

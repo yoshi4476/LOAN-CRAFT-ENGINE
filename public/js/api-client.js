@@ -20,10 +20,31 @@ const ApiClient = {
     try { return JSON.parse(localStorage.getItem('lce_user')); } catch { return null; }
   },
 
+  async licenseLogin(license_key) {
+    const res = await fetch(`${this.BASE}/api/auth/license-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ license_key })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.code === 'LICENSE_EXPIRED' && typeof App !== 'undefined' && App.showSubscriptionExpiredModal) {
+        App.showSubscriptionExpiredModal(data.error);
+      }
+      throw new Error(data.error || 'APIエラー');
+    }
+    
+    localStorage.setItem('lce_token', data.token);
+    localStorage.setItem('lce_user', JSON.stringify(data.user));
+    localStorage.setItem('lce_license_key', license_key); // 自動復旧用に保持
+    return data;
+  },
+
   logout() {
     localStorage.removeItem('lce_token');
     localStorage.removeItem('lce_user');
-    window.location.href = '/'; // ログイン機能無効化中はトップへリダイレクト
+    localStorage.removeItem('lce_license_key');
+    window.location.reload();
   },
 
   // 共通fetchメソッド（サーバー未稼働時はnullを返す）
@@ -40,7 +61,39 @@ const ApiClient = {
         console.warn(`[API] ${endpoint}: サーバー未接続（HTML応答）`);
         return null;
       }
-      if (res.status === 401) { console.warn('[API] 認証エラー'); return null; }
+
+      if (res.status === 401) { 
+        console.warn('[API] 認証エラー');
+        
+        // サイレント再認証（自動リフレッシュ）フロー
+        const savedKey = localStorage.getItem('lce_license_key');
+        if (savedKey && !options._isRetry) {
+          try {
+            console.log('[API] 自動セッション復旧を試行します...');
+            const reAuth = await fetch(`${this.BASE}/api/auth/license-login`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ license_key: savedKey })
+            });
+            if (reAuth.ok) {
+              const reData = await reAuth.json();
+              localStorage.setItem('lce_token', reData.token);
+              localStorage.setItem('lce_user', JSON.stringify(reData.user));
+              // 復旧成功時は元のリクエストを再試行
+              options._isRetry = true;
+              return await this.request(endpoint, options);
+            }
+          } catch(e) { /* 失敗した場合は下の再ログインUIへ */ }
+        }
+
+        // 自動復旧不可の場合はデータ保持・再ログイン用モーダルを表示
+        localStorage.removeItem('lce_token');
+        if (typeof App !== 'undefined' && App.showReloginModal) {
+          App.showReloginModal();
+        } else if (typeof App !== 'undefined' && App.showLicenseScreen) {
+          App.showLicenseScreen();
+        }
+        return null; 
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'APIエラー');
       return data;

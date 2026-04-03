@@ -456,7 +456,7 @@ Object.assign(BankAudit, {
       </div>
     </div>`;
   }
-});});
+});
 
 
 // ========== ② DNA登録時にOCR/Excel読込を自動起動 ==========
@@ -566,6 +566,16 @@ Object.assign(BankAudit, {
         if (parsed.error) throw new Error(parsed.error);
 
         const dna = Database.loadCompanyData() || {};
+        // 企業基本情報の反映
+        if (parsed.companyName) dna.companyName = parsed.companyName;
+        if (parsed.representativeName) dna.repName = parsed.representativeName;
+        if (parsed.industry) dna.industry = parsed.industry;
+        if (parsed.establishedDate) dna.establishedMonth = parsed.establishedDate;
+        if (parsed.address) dna.address = parsed.address;
+        if (parsed.phone) dna.phone = parsed.phone;
+        if (parsed.employees) dna.employees = parsed.employees;
+        if (parsed.fiscalPeriod) dna.fiscalPeriod = parsed.fiscalPeriod;
+        // 財務データの反映
         if (parsed.revenue) dna.annualRevenue = parsed.revenue;
         if (parsed.opProfit) dna.operatingProfit = parsed.opProfit;
         if (parsed.ordProfit) dna.ordinaryProfit = parsed.ordProfit;
@@ -582,6 +592,8 @@ Object.assign(BankAudit, {
         if (parsed.fixedAssets) dna.fixedAssets = parsed.fixedAssets;
         if (parsed.currentLiab) dna.currentLiabilities = parsed.currentLiab;
         if (parsed.capital) dna.capitalAmount = Math.round(parsed.capital / 10000);
+        if (parsed.grossProfit) dna.grossProfit = parsed.grossProfit;
+        if (parsed.cogs) dna.costOfSales = parsed.cogs;
         
         const ibd = (parsed.shortDebt||0) + (parsed.longDebt||0) + (parsed.bonds||0);
         if (ibd > 0) dna.totalDebt = ibd;
@@ -589,6 +601,16 @@ Object.assign(BankAudit, {
         this.currentFS = { ...parsed };
         Database.saveCompanyData(dna);
 
+        // 企業基本情報の表示
+        const companyItems = [
+          ['会社名', dna.companyName], ['代表者', dna.repName],
+          ['業種', dna.industry], ['設立', dna.establishedMonth],
+          ['住所', dna.address], ['決算期', dna.fiscalPeriod],
+          ['従業員数', dna.employees ? dna.employees + '名' : null],
+          ['電話番号', dna.phone]
+        ].filter(([,v]) => v != null);
+
+        // 財務データの表示
         const items = [
           ['売上高', dna.annualRevenue], ['経常利益', dna.ordinaryProfit],
           ['総資産', dna.totalAssets], ['純資産', dna.netAssets],
@@ -597,8 +619,23 @@ Object.assign(BankAudit, {
         ].filter(([,v]) => v != null);
 
         let html = `<div class="glass-card highlight" style="max-width:960px;margin:0 auto;">
-          <div class="report-title">✅ PDFのAI読込・DNA反映が完了しました</div>
-          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">抽出された主な財務データ:</div>
+          <div class="report-title">✅ PDFのAI読込・DNA反映が完了しました</div>`;
+
+        // 企業基本情報セクション
+        if (companyItems.length > 0) {
+          html += `<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--accent-primary);">🏢 企業基本情報</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px;">`;
+          companyItems.forEach(([label, value]) => {
+            html += `<div style="padding:8px;background:rgba(108,99,255,0.06);border-radius:6px;">
+              <div style="font-size:9px;color:var(--text-muted);">${label}</div>
+              <div style="font-size:12px;font-weight:700;">${value}</div>
+            </div>`;
+          });
+          html += `</div>`;
+        }
+
+        // 財務データセクション
+        html += `<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--accent-green);">💰 財務データ</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:16px;">`;
         items.forEach(([label, value]) => {
           html += `<div style="padding:8px;background:rgba(76,175,80,0.06);border-radius:6px;text-align:center;">

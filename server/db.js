@@ -29,6 +29,7 @@ async function getDb() {
         deleted_at TIMESTAMPTZ,
         deleted_by INTEGER,
         last_login TIMESTAMPTZ,
+        terms_agreed_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -214,6 +215,10 @@ async function getDb() {
         console.warn(`⚠️ ${t} テーブルへの tenant_id 追加スキップ: `, e.message);
       }
     }
+    
+    // ▼ 利用規約カラムの追加
+    try { await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_agreed_at TIMESTAMPTZ;'); } catch(e) {}
+
     
     // ▼ デフォルトテナント（ID=1）の確保
     try {

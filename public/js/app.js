@@ -84,11 +84,20 @@ const App = {
 
   // アプリ初期化
   init() {
-    // 認証ガード：未ログイン時はログイン画面へリダイレクト (ユーザー要望により一時無効化)
-    // if (typeof ApiClient !== 'undefined' && !ApiClient.getToken()) {
-    //   window.location.href = '/login';
-    //   return;
-    // }
+    // 認証ガード：SaaS版 ライセンス認証
+    if (typeof ApiClient !== 'undefined' && !ApiClient.getToken()) {
+      this.showLicenseScreen();
+      return;
+    }
+
+    // コンプライアンスガード：利用規約への同意チェック
+    if (typeof ApiClient !== 'undefined') {
+      const user = ApiClient.getUser();
+      if (user && user.role !== 'super_admin' && !user.terms_agreed_at) {
+        this.showTermsAgreementModal();
+        return;
+      }
+    }
 
     // ユーザー設定値の復元
     if (typeof UserSettings !== 'undefined') UserSettings.load();
@@ -99,6 +108,243 @@ const App = {
     this.showBootMessage();
     if (typeof DocLearning !== "undefined") DocLearning.initDefaultKnowledge();
     this.updateSidebarProgress();
+    this.updateSidebarProfile();
+  },
+
+  // ライセンス認証画面
+  showLicenseScreen() {
+    const overlay = document.createElement('div');
+    overlay.id = 'licenseOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-card);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;';
+
+    overlay.innerHTML = `
+      <div class="glass-card highlight" style="max-width:400px;width:90%;text-align:center;">
+        <div style="font-size:32px;margin-bottom:8px;">🏦</div>
+        <div class="report-title">SaaS ライセンス認証</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:20px;">
+          システムを利用するには、管理者から提供されたライセンスキーを入力してください。<br>
+          <span style="font-size:10px;color:var(--text-muted);">※未契約の場合は「SUPER-ADMIN-MASTER-KEY」で管理者として入れます</span>
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <input id="saasLicenseKey" type="password" placeholder="XXXX-XXXX-XXXX-XXXX" style="width:100%;padding:12px;background:var(--bg-input);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:16px;text-align:center;letter-spacing:2px;font-family:var(--font-mono);">
+          <button id="saasActivateBtn" class="btn btn-primary" style="padding:10px;font-size:14px;font-weight:700;">認証して開始</button>
+        </div>
+        <div id="saasLicenseError" style="color:var(--accent-red);font-size:12px;display:none;"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('saasActivateBtn').addEventListener('click', async () => {
+      const key = document.getElementById('saasLicenseKey').value.trim();
+      const errEl = document.getElementById('saasLicenseError');
+      if (!key) {
+        errEl.innerText = 'ライセンスキーを入力してください';
+        errEl.style.display = 'block';
+        return;
+      }
+      try {
+        errEl.style.display = 'none';
+        document.getElementById('saasActivateBtn').innerText = '認証中...';
+        await ApiClient.licenseLogin(key);
+        // 成功したらリロードしてUI起動
+        window.location.reload();
+      } catch (e) {
+        errEl.innerText = e.message;
+        errEl.style.display = 'block';
+        document.getElementById('saasActivateBtn').innerText = '認証して開始';
+      }
+    });
+
+    const bodyStyle = document.createElement('style');
+    bodyStyle.innerHTML = 'body { overflow: hidden; }';
+    document.head.appendChild(bodyStyle);
+  },
+
+  // 再ログイン・セッション復旧モーダル（入力状態を保持）
+  showReloginModal() {
+    // 既存のモーダルがあれば表示しない（二重表示防止）
+    if (document.getElementById('reloginOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'reloginOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999999;';
+
+    overlay.innerHTML = `
+      <div class="glass-card" style="max-width:400px;width:90%;text-align:center;padding:30px;box-shadow:0 10px 40px rgba(0,0,0,0.5);border-color:var(--accent-red);">
+        <div style="font-size:32px;margin-bottom:8px;">⏱️</div>
+        <div style="font-size:18px;font-weight:bold;color:var(--accent-red);margin-bottom:10px;">セッション有効期限切れ</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:20px;text-align:left;">
+          長時間のアクセスがない、もしくは別の端末でライセンスが使用されたため、通信を切断しました。<br><br>
+          <span style="color:var(--primary-light);font-weight:bold;">安心してください：入力中のデータは保持されています。</span><br>
+          作業を再開するには再度ライセンスキーを入力してください。
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <input id="reloginKey" type="password" placeholder="ライセンスキー (XXXX-XXXX-XXXX)" style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:16px;text-align:center;">
+          <button id="reloginBtn" class="btn btn-primary" style="padding:10px;font-size:14px;background:var(--accent-red);">認証して再開</button>
+        </div>
+        <div id="reloginError" style="color:var(--accent-red);font-size:12px;display:none;"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // 以前のキーがあればプレフィル
+    const savedKey = localStorage.getItem('lce_license_key');
+    if (savedKey) document.getElementById('reloginKey').value = savedKey;
+
+    document.getElementById('reloginBtn').addEventListener('click', async () => {
+      const key = document.getElementById('reloginKey').value.trim();
+      const errEl = document.getElementById('reloginError');
+      if (!key) { errEl.innerText = 'ライセンスキーを入力してください'; errEl.style.display = 'block'; return; }
+      
+      errEl.style.display = 'none';
+      document.getElementById('reloginBtn').innerText = '認証中...';
+      try {
+        await ApiClient.licenseLogin(key);
+        overlay.remove(); // 成功したらモーダルを消す（DOMも入力を保持したまま再開）
+        App.addSystemMessage(Utils.createAlert('success', '🔐', 'セッションを復旧しました。未保存のデータは失われていません。作業を再開できます。'));
+      } catch (e) {
+        errEl.innerText = e.message;
+        errEl.style.display = 'block';
+        document.getElementById('reloginBtn').innerText = '認証して再開';
+      }
+    });
+
+    // 背景スクロールを即座にブロック
+    document.body.style.overflow = 'hidden';
+  },
+
+  // サブスクリプション期限切れ・無効化ロック画面（ハードブロック）
+  showSubscriptionExpiredModal(message) {
+    // 他のモーダルがあれば削除
+    const old1 = document.getElementById('reloginOverlay');
+    if (old1) old1.remove();
+    const old2 = document.getElementById('licenseOverlay');
+    if (old2) old2.remove();
+    if (document.getElementById('expiredOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'expiredOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999999;backdrop-filter:blur(10px);';
+
+    overlay.innerHTML = `
+      <div class="glass-card" style="max-width:500px;width:90%;text-align:center;padding:40px 30px;border-top:4px solid var(--accent-red);box-shadow:0 10px 50px rgba(255,50,50,0.2);">
+        <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+        <div style="font-size:22px;font-weight:bold;color:var(--text-primary);margin-bottom:12px;">サブスクリプション有効期限終了</div>
+        <p style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;text-align:left;">
+          <b style="color:var(--accent-red);">${message || '現在ご利用のライセンスは有効期限が終了したか、無効化されています。'}</b><br><br>
+          <span style="color:var(--text-muted);font-size:13px;">
+          システムを継続して利用するには、管理者（SaaS運営）に更新をご連絡いただき、新たなライセンスキーを適用してください。<br>
+          ※入力済みのデータは安全に保管されています。
+          </span>
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <input id="renewKey" type="password" placeholder="新しいライセンスキー (XXXX-XXXX-XXXX)" style="width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid var(--border-secondary);border-radius:6px;color:var(--text-primary);font-size:16px;text-align:center;letter-spacing:1px;font-family:var(--font-mono);">
+          <button id="renewBtn" class="btn btn-primary" style="padding:12px;font-size:15px;background:var(--primary);">更新ライセンスを適用して開錠</button>
+        </div>
+        <div id="renewError" style="color:var(--accent-red);font-size:13px;display:none;margin-top:12px;"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('renewBtn').addEventListener('click', async () => {
+      const key = document.getElementById('renewKey').value.trim();
+      const errEl = document.getElementById('renewError');
+      if (!key) { errEl.innerText = '新しいライセンスキーを入力してください'; errEl.style.display = 'block'; return; }
+      
+      errEl.style.display = 'none';
+      document.getElementById('renewBtn').innerText = '確認中...';
+      try {
+        await ApiClient.licenseLogin(key);
+        // 新しいライセンスで成功！
+        overlay.remove();
+        document.body.style.overflow = '';
+        App.addSystemMessage(Utils.createAlert('success', '✨', 'ライセンスが更新されました。引き続きご利用いただけます。'));
+      } catch (e) {
+        errEl.innerText = e.message;
+        errEl.style.display = 'block';
+        document.getElementById('renewBtn').innerText = '更新ライセンスを適用して開錠';
+      }
+    });
+
+    document.body.style.overflow = 'hidden';
+  },
+
+  // 利用規約・プライバシーポリシー同意画面
+  showTermsAgreementModal() {
+    if (document.getElementById('termsOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'termsOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999999;backdrop-filter:blur(5px);';
+
+    overlay.innerHTML = `
+      <div class="glass-card" style="max-width:600px;width:90%;padding:40px 30px;border-top:4px solid var(--primary);">
+        <div style="font-size:32px;margin-bottom:12px;text-align:center;">📜</div>
+        <div style="font-size:20px;font-weight:bold;color:var(--text-primary);margin-bottom:20px;text-align:center;">利用規約とプライバシーポリシーの同意</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;background:var(--bg-input);padding:20px;border-radius:8px;max-height:300px;overflow-y:auto;text-align:left;">
+          <p>LOAN CRAFT ENGINE をご利用いただきありがとうございます。</p>
+          <p>本システムは、企業の財務および融資に関する機密性の高い情報を取り扱います。ご入力いただいた情報は、テナント（ご契約者様）単位で厳重に分離され、安全に保管されます。</p>
+          <h4 style="margin:16px 0 8px;color:var(--text-primary);">第1条（情報の取り扱いについて）</h4>
+          <p>ユーザーによって入力・アップロードされた財務情報、事業計画、その他のデータは、分析および資料作成機能のために安全な環境下において一時的に学習用データまたはAI（OpenAI等）を通じた解析へ使用される場合があります。システム内に記録される操作ログおよび入力データは、システム保護・保守を目的として取得されます。</p>
+          <h4 style="margin:16px 0 8px;color:var(--text-primary);">第2条（免責事項）</h4>
+          <p>本システムが生成する事業計画書・診断結果・資金繰り表などは、融資獲得の成功を保証するものではありません。生成されたデータは必ず専門家等による確認を行い、自己責任の下で提出・利用を行ってください。</p>
+          <p style="margin-top:20px;text-align:center;color:var(--primary-light);">システムを利用開始することで、上記の利用規約およびプライバシーポリシーに同意したものとみなされます。</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;margin-bottom:12px;">
+            <input type="checkbox" id="agreeTermsCheck" style="width:18px;height:18px;accent-color:var(--primary);">
+            <span style="user-select:none;">上記のすべての規約に同意します</span>
+          </label>
+          <button id="agreeTermsBtn" class="btn btn-primary" style="padding:12px 30px;font-size:15px;" disabled>同意してシステムを利用開始する</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const check = document.getElementById('agreeTermsCheck');
+    const btn = document.getElementById('agreeTermsBtn');
+
+    check.addEventListener('change', () => {
+      btn.disabled = !check.checked;
+    });
+
+    btn.addEventListener('click', async () => {
+      if (!check.checked) return;
+      btn.innerText = '処理中...';
+      btn.disabled = true;
+      try {
+        await ApiClient.request('/api/auth/agree-terms', { method: 'POST' });
+        // LocalStorageのユーザー情報を手動で更新
+        const u = ApiClient.getUser();
+        if (u) {
+          u.terms_agreed_at = new Date().toISOString();
+          localStorage.setItem('lce_user', JSON.stringify(u));
+        }
+        overlay.remove();
+        document.body.style.overflow = '';
+        App.init(); // 規約同意完了後に本体の初期化処理を再開
+      } catch (e) {
+        alert('エラーが発生しました: ' + e.message);
+        btn.innerText = '同意してシステムを利用開始する';
+        btn.disabled = false;
+      }
+    });
+
+    document.body.style.overflow = 'hidden';
+  },
+
+  // サイドバーのユーザープロフィール更新
+  updateSidebarProfile() {
+    const settings = Database.load(Database.KEYS.SETTINGS) || {};
+    const nameEl = document.getElementById('sidebarUserName');
+    const tenantEl = document.getElementById('sidebarTenantName');
+    
+    if (nameEl) nameEl.textContent = settings.userName || '山田太郎 (Admin)';
+    if (tenantEl) {
+      // 登録プロファイルから取得するか、デフォルトを入れる
+      const profiles = Database.load(Database.KEYS.PROFILES) || [];
+      tenantEl.textContent = profiles.length > 0 ? profiles[profiles.length - 1].name : '株式会社サンプル';
+    }
   },
 
   // サイドバー折りたたみ制御
@@ -646,6 +892,9 @@ const UserSettings = {
       document.body.classList.remove('light-theme');
     }
     
+    // サイドバーのプロフィール即時反映
+    App.updateSidebarProfile();
+
     document.getElementById('userSettingsModal').style.display = 'none';
     App.addSystemMessage(Utils.createAlert('success', '✅', 'システム・アカウント設定を保存しました。'));
   },
